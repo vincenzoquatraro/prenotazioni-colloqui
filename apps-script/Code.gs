@@ -202,6 +202,10 @@ function aggiungi(nome, obj) {
   const sheet = foglio(nome);
   const intestazioni = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
     .map(h => String(h).trim().toLowerCase());
+  // colonna "id" presente: progressivo max+1
+  if (intestazioni.includes("id") && !("id" in obj)) {
+    obj.id = leggi(nome).reduce((max, r) => Math.max(max, Number(r.id) || 0), 0) + 1;
+  }
   const riga = intestazioni.map(h => (h in obj ? obj[h] : ""));
   sheet.appendRow(riga);
   // forza testo per data/ora così Sheets non le converte
