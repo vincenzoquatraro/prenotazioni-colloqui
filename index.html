@@ -1,0 +1,140 @@
+```html
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Colloqui con i docenti</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <header>
+        <div class="badge">COLLOQUI DOCENTI</div>
+
+        <h1>Prenota il tuo colloquio</h1>
+
+        <p>
+            Scegli il docente, il giorno e uno degli
+            appuntamenti disponibili.
+        </p>
+    </header>
+
+
+    <main>
+
+        <!-- DOCENTE -->
+        <section class="card">
+
+            <label for="docente">
+                Docente
+            </label>
+
+            <select id="docente">
+                <option value="">
+                    Caricamento docenti...
+                </option>
+            </select>
+
+        </section>
+
+
+        <!-- DATA -->
+        <section class="card">
+
+            <label for="data">
+                Data
+            </label>
+
+            <select id="data" disabled>
+                <option value="">
+                    Prima scegli un docente
+                </option>
+            </select>
+
+        </section>
+
+
+        <!-- ORARI -->
+        <section class="card">
+
+            <label>
+                Orario
+            </label>
+
+            <div id="slot-container" class="slots">
+
+                <div class="empty">
+                    Scegli docente e data
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- DATI -->
+        <section id="dati-card" class="card hidden">
+
+            <label for="genitore">
+                Nome e cognome del genitore
+            </label>
+
+            <input
+                id="genitore"
+                type="text"
+                placeholder="Mario Rossi"
+                autocomplete="name"
+            >
+
+
+            <label for="alunno">
+                Nome e cognome dell'alunno
+            </label>
+
+            <input
+                id="alunno"
+                type="text"
+                placeholder="Luca Rossi"
+            >
+
+
+            <label for="classe">
+                Classe
+            </label>
+
+            <input
+                id="classe"
+                type="text"
+                placeholder="2B"
+            >
+
+
+            <button id="prenota-btn">
+                Conferma prenotazione
+            </button>
+
+        </section>
+
+
+        <!-- MESSAGGIO -->
+        <div id="message"></div>
+
+    </main>
+
+</div>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>
+```
