@@ -287,7 +287,13 @@ function minutiToOra(minuti) {
 }
 
 function normalizzaData(data) {
-    return data ? String(data).substring(0, 10) : "";
+    if (!data) return "";
+    const testo = String(data);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(testo)) return testo;
+    // Date di Sheets serializzate (ISO UTC o "Wed Nov 25 2026 ..."): converti in giorno locale
+    const d = new Date(testo);
+    if (isNaN(d)) return testo.substring(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function normalizzaOra(ora) {
