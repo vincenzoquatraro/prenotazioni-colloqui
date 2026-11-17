@@ -6,6 +6,11 @@ const $ = id => document.getElementById(id);
 
 let codice = sessionStorage.getItem("admin_codice") || "";
 let dati = { docenti: [], disponibilita: [], prenotazioni: [] };
+const aperte = new Set(); // fasce con la riga slot espansa
+
+// devono coincidere con Code.gs
+const BLOCCO = "[INDISPONIBILE]";
+const DURATA_SLOT = 15;
 
 // =====================================================
 // API
@@ -64,6 +69,7 @@ async function ricarica() {
     popolaDocenti();
     renderPrenotazioni();
     renderDisponibilita();
+    renderDocenti();
 }
 
 // =====================================================
@@ -72,7 +78,7 @@ async function ricarica() {
 
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", function() {
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === tab));
-    ["tab-prenotazioni", "tab-disponibilita"].forEach(id => $(id).classList.toggle("hidden", id !== tab.dataset.tab));
+    document.querySelectorAll(".tab").forEach(t => $(t.dataset.tab).classList.toggle("hidden", t !== tab));
 }));
 
 $("f-docente").addEventListener("change", renderPrenotazioni);
@@ -104,20 +110,23 @@ function renderPrenotazioni() {
     tbody.innerHTML = righe.length ? "" : `<tr><td colspan="7"><div class="empty">Nessuna prenotazione</div></td></tr>`;
 
     righe.forEach(p => {
+        const chiuso = p.genitore === BLOCCO;
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${esc(formattaData(p.data))}</td>
             <td>${esc(p.ora_inizio)} – ${esc(p.ora_fine)}</td>
             <td>${esc(nomeDocente(p.docente_id))}</td>
-            <td>${esc(p.genitore)}</td>
-            <td>${esc(p.alunno)}</td>
-            <td>${esc(p.classe)}</td>
-            <td><button class="btn-ghost btn-danger" type="button">Annulla</button></td>`;
+            ${chiuso
+                ? `<td colspan="3"><span class="tag">Slot chiuso</span></td>`
+                : `<td>${esc(p.genitore)}</td><td>${esc(p.alunno)}</td><td>${esc(p.classe)}</td>`}
+            <td><button class="btn-ghost btn-danger" type="button">${chiuso ? "Riapri" : "Annulla"}</button></td>`;
         tr.querySelector("button").addEventListener("click", () => azione(
-            `Annullare la prenotazione di ${p.genitore} (${formattaData(p.data)} ${p.ora_inizio})?`,
+            chiuso
+                ? `Riaprire lo slot ${formattaData(p.data)} ${p.ora_inizio}?`
+                : `Annullare la prenotazione di ${p.genitore} (${formattaData(p.data)} ${p.ora_inizio})?`,
             "annulla_prenotazione",
             { docente_id: p.docente_id, data: p.data, ora_inizio: p.ora_inizio },
-            "Prenotazione annullata"
+            chiuso ? "Slot riaperto" : "Prenotazione annullata"
         ));
         tbody.appendChild(tr);
     });
@@ -156,13 +165,16 @@ function renderDisponibilita() {
         .sort((a, b) => (a.data + a.ora_inizio).localeCompare(b.data + b.ora_inizio));
 
     const tbody = $("tbody-disponibilita");
-    tbody.innerHTML = righe.length ? "" : `<tr><td colspan="5"><div class="empty">Nessuna fascia</div></td></tr>`;
+    tbody.innerHTML = righe.length ? "" : `<tr><td colspan="6"><div class="empty">Nessuna fascia</div></td></tr>`;
 
     righe.forEach(d => {
-        const prenotati = dati.prenotazioni.filter(p =>
+        const occupati = dati.prenotazioni.filter(p =>
             String(p.docente_id) === String(d.docente_id) && p.data === d.data &&
             p.ora_inizio >= d.ora_inizio && p.ora_inizio < d.ora_fine
-        ).length;
+        );
+        const chiusi = occupati.filter(p => p.genitore === BLOCCO).length;
+        const prenotati = occupati.length - chiusi;
+        const chiave = d.docente_id + d.data + d.ora_inizio;
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -170,14 +182,108 @@ function renderDisponibilita() {
             <td>${esc(d.ora_inizio)} – ${esc(d.ora_fine)}</td>
             <td>${esc(nomeDocente(d.docente_id))}</td>
             <td>${prenotati}</td>
-            <td><button class="btn-ghost btn-danger" type="button">Elimina</button></td>`;
-        tr.querySelector("button").addEventListener("click", () => azione(
+            <td>${chiusi}</td>
+            <td class="azioni">
+                <button class="btn-ghost" type="button">Slot</button>
+                <button class="btn-ghost btn-danger" type="button">Elimina</button>
+            </td>`;
+
+        // riga espandibile con gli slot da chiudere/riaprire
+        const trSlot = document.createElement("tr");
+        trSlot.className = aperte.has(chiave) ? "" : "hidden";
+        trSlot.innerHTML = `<td colspan="6"><div class="slots"></div></td>`;
+        renderSlotAdmin(trSlot.querySelector(".slots"), d, occupati);
+
+        const [btnSlot, btnElimina] = tr.querySelectorAll("button");
+        btnSlot.addEventListener("click", () => {
+            trSlot.classList.toggle("hidden");
+            aperte[trSlot.classList.contains("hidden") ? "delete" : "add"](chiave);
+        });
+        btnElimina.addEventListener("click", () => azione(
             prenotati
                 ? `Questa fascia ha ${prenotati} prenotazioni, che resteranno nel foglio. Eliminare comunque?`
                 : "Eliminare questa fascia?",
             "elimina_disponibilita",
             { docente_id: d.docente_id, data: d.data, ora_inizio: d.ora_inizio, ora_fine: d.ora_fine },
             "Fascia eliminata"
+        ));
+        tbody.append(tr, trSlot);
+    });
+}
+
+function renderSlotAdmin(contenitore, fascia, occupati) {
+    for (let t = minuti(fascia.ora_inizio); t + DURATA_SLOT <= minuti(fascia.ora_fine); t += DURATA_SLOT) {
+        const ora = minutiToOra(t);
+        const p = occupati.find(x => x.ora_inizio === ora);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "slot";
+        btn.textContent = ora;
+
+        if (p && p.genitore !== BLOCCO) {
+            btn.classList.add("booked");
+            btn.disabled = true;
+            btn.title = `Prenotato: ${p.genitore}`;
+        } else {
+            if (p) btn.classList.add("closed");
+            btn.title = p ? "Chiuso – clic per riaprire" : "Libero – clic per chiudere";
+            btn.addEventListener("click", async () => {
+                btn.disabled = true;
+                const base = { docente_id: fascia.docente_id, data: fascia.data, ora_inizio: ora };
+                try {
+                    await api(p ? "annulla_prenotazione" : "blocca_slot",
+                        p ? base : { ...base, ora_fine: minutiToOra(t + DURATA_SLOT) });
+                    toast(p ? "Slot riaperto" : "Slot chiuso", "success");
+                    await ricarica();
+                } catch (err) {
+                    toast(err.message, "error");
+                    btn.disabled = false;
+                }
+            });
+        }
+        contenitore.appendChild(btn);
+    }
+}
+
+// =====================================================
+// DOCENTI
+// =====================================================
+
+$("form-docente").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const btn = this.querySelector("button");
+    btn.disabled = true;
+    try {
+        await api("aggiungi_docente", { nome: $("n-nome").value.trim(), email: $("n-email").value.trim() });
+        toast("Docente aggiunto", "success");
+        this.reset();
+        await ricarica();
+    } catch (err) {
+        toast(err.message, "error");
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+function renderDocenti() {
+    const tbody = $("tbody-docenti");
+    tbody.innerHTML = dati.docenti.length ? "" : `<tr><td colspan="5"><div class="empty">Nessun docente</div></td></tr>`;
+
+    dati.docenti.forEach(d => {
+        const fasce = dati.disponibilita.filter(x => String(x.docente_id) === String(d.id)).length;
+        const pren = dati.prenotazioni.filter(x => String(x.docente_id) === String(d.id) && x.genitore !== BLOCCO).length;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${esc(d.nome)}</td>
+            <td>${esc(d.email || "—")}</td>
+            <td>${fasce}</td>
+            <td>${pren}</td>
+            <td><button class="btn-ghost btn-danger" type="button">Elimina</button></td>`;
+        tr.querySelector("button").addEventListener("click", () => azione(
+            `Eliminare ${d.nome}${fasce ? ` e le sue ${fasce} fasce orarie` : ""}?`,
+            "elimina_docente",
+            { id: d.id },
+            "Docente eliminato"
         ));
         tbody.appendChild(tr);
     });
@@ -196,6 +302,15 @@ async function azione(conferma, action, payload, ok) {
     } catch (err) {
         toast(err.message, "error");
     }
+}
+
+function minuti(ora) {
+    const [h, m] = String(ora).split(":").map(Number);
+    return h * 60 + m;
+}
+
+function minutiToOra(t) {
+    return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0");
 }
 
 function nomeDocente(id) {

@@ -38,6 +38,7 @@
     <div class="tabs" role="tablist">
         <button class="tab active" data-tab="tab-prenotazioni" role="tab">Prenotazioni</button>
         <button class="tab" data-tab="tab-disponibilita" role="tab">Disponibilità</button>
+        <button class="tab" data-tab="tab-docenti" role="tab">Docenti</button>
     </div>
 
     <!-- PRENOTAZIONI -->
@@ -98,9 +99,39 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>Data</th><th>Orario</th><th>Docente</th><th>Prenotati</th><th></th></tr>
+                        <tr><th>Data</th><th>Orario</th><th>Docente</th><th>Prenotati</th><th>Chiusi</th><th></th></tr>
                     </thead>
                     <tbody id="tbody-disponibilita"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- DOCENTI -->
+    <section id="tab-docenti" class="hidden">
+        <form id="form-docente" class="card">
+            <h2>Aggiungi docente</h2>
+            <div class="grid-2">
+                <div class="field">
+                    <label for="n-nome">Nome</label>
+                    <input id="n-nome" type="text" placeholder="Prof.ssa Neri" required>
+                </div>
+                <div class="field">
+                    <label for="n-email">Email (facoltativa, per invito Calendar)</label>
+                    <input id="n-email" type="email" placeholder="neri@scuola.it">
+                </div>
+            </div>
+            <button class="primary" type="submit">Aggiungi docente</button>
+        </form>
+
+        <div class="card">
+            <h2>Docenti</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Nome</th><th>Email</th><th>Fasce</th><th>Prenotazioni</th><th></th></tr>
+                    </thead>
+                    <tbody id="tbody-docenti"></tbody>
                 </table>
             </div>
         </div>

@@ -2,16 +2,21 @@
 // PRENOTAZIONE COLLOQUI — Backend Google Apps Script
 //
 // Fogli richiesti (prima riga = intestazioni, l'ordine delle colonne non conta):
-//   Docenti:       id | nome
-//   Disponibilita: docente_id | data | ora_inizio | ora_fine
-//   Prenotazioni:  docente_id | data | ora_inizio | ora_fine | genitore | alunno | classe | timestamp
+//   Docenti:       id | nome | email (facoltativa: invito Calendar)
+//   Disponibilita: id | docente_id | data | ora_inizio | ora_fine
+//   Prenotazioni:  id | docente_id | data | ora_inizio | ora_fine | genitore | alunno | classe | timestamp | event_id (facoltativa)
 //
-// Codice admin: Impostazioni progetto > Proprietà script > ADMIN_CODE
+// Proprietà script (Impostazioni progetto > Proprietà script):
+//   ADMIN_CODE   codice di accesso al pannello (obbligatorio)
+//   CALENDAR_ID  ID del Google Calendar dove creare gli eventi (facoltativo)
 // =====================================================
 
 const FOGLIO_DOCENTI = "Docenti";
 const FOGLIO_DISPONIBILITA = "Disponibilita";
 const FOGLIO_PRENOTAZIONI = "Prenotazioni";
+
+const DURATA_SLOT = 15;
+const BLOCCO = "[INDISPONIBILE]"; // genitore fittizio per gli slot chiusi dall'admin
 
 // =====================================================
 // ENTRY POINT
@@ -21,7 +26,7 @@ function doGet() {
   try {
     return json({
       success: true,
-      docenti: leggi(FOGLIO_DOCENTI),
+      docenti: leggi(FOGLIO_DOCENTI).map(d => ({ id: d.id, nome: d.nome })),
       disponibilita: leggi(FOGLIO_DISPONIBILITA),
       // al pubblico solo gli slot occupati, nessun dato personale
       prenotazioni: leggi(FOGLIO_PRENOTAZIONI).map(p => ({
@@ -41,7 +46,10 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents);
     lock.waitLock(15000);
 
-    if (!body.action) return json(prenota(body)); // retrocompatibile con app.js
+    if (!body.action) {
+      if (body.genitore === BLOCCO) return json({ success: false, message: "Nome non valido." });
+      return json(prenota(body)); // retrocompatibile con app.js
+    }
 
     if (!codiceValido(body.codice)) {
       Utilities.sleep(1500); // rallenta tentativi a forza bruta
@@ -58,12 +66,19 @@ function doPost(e) {
           disponibilita: leggi(FOGLIO_DISPONIBILITA),
           prenotazioni: leggi(FOGLIO_PRENOTAZIONI)
         });
+      case "aggiungi_docente":
+        return json(aggiungiDocente(body));
+      case "elimina_docente":
+        return json(eliminaDocente(body));
       case "aggiungi_disponibilita":
         return json(aggiungiDisponibilita(body));
       case "elimina_disponibilita":
-        return json(eliminaRiga(FOGLIO_DISPONIBILITA, body, ["docente_id", "data", "ora_inizio", "ora_fine"]));
+        return json(eliminaDove(FOGLIO_DISPONIBILITA, r => stesseChiavi(r, body, ["docente_id", "data", "ora_inizio", "ora_fine"]))
+          ? { success: true } : nonTrovato());
+      case "blocca_slot":
+        return json(prenota({ ...body, genitore: BLOCCO, alunno: "-", classe: "-" }));
       case "annulla_prenotazione":
-        return json(eliminaRiga(FOGLIO_PRENOTAZIONI, body, ["docente_id", "data", "ora_inizio"]));
+        return json(annullaPrenotazione(body));
       default:
         return json({ success: false, message: "Azione sconosciuta." });
     }
@@ -75,7 +90,7 @@ function doPost(e) {
 }
 
 // =====================================================
-// PRENOTAZIONE PUBBLICA
+// PRENOTAZIONI
 // =====================================================
 
 function prenota(b) {
@@ -95,17 +110,19 @@ function prenota(b) {
     return { success: false, message: "Questo orario è appena stato prenotato da un altro genitore. Scegline un altro." };
   }
 
-  aggiungi(FOGLIO_PRENOTAZIONI, {
+  const riga = {
     docente_id: b.docente_id,
     data: b.data,
     ora_inizio: b.ora_inizio,
     ora_fine: b.ora_fine,
-    genitore: pulisci(b.genitore),
+    genitore: b.genitore === BLOCCO ? BLOCCO : pulisci(b.genitore),
     alunno: pulisci(b.alunno),
     classe: pulisci(b.classe),
     timestamp: new Date()
-  });
+  };
+  if (riga.genitore !== BLOCCO) riga.event_id = creaEvento(riga);
 
+  aggiungi(FOGLIO_PRENOTAZIONI, riga);
   return { success: true };
 }
 
@@ -115,8 +132,16 @@ function slotDisponibile(docenteId, data, oraInizio) {
     String(d.docente_id) === String(docenteId) &&
     d.data === data &&
     t >= minuti(d.ora_inizio) &&
-    t + 15 <= minuti(d.ora_fine)
+    t + DURATA_SLOT <= minuti(d.ora_fine)
   );
+}
+
+function annullaPrenotazione(b) {
+  const p = leggi(FOGLIO_PRENOTAZIONI).find(r => stesseChiavi(r, b, ["docente_id", "data", "ora_inizio"]));
+  if (!p) return nonTrovato();
+  eliminaEvento(p.event_id);
+  foglio(FOGLIO_PRENOTAZIONI).deleteRow(p._riga);
+  return { success: true };
 }
 
 // =====================================================
@@ -128,12 +153,31 @@ function codiceValido(codice) {
   return Boolean(atteso) && String(codice || "") === atteso;
 }
 
+function aggiungiDocente(b) {
+  const nome = pulisci(b.nome || "");
+  if (!nome) return { success: false, message: "Inserisci il nome del docente." };
+  const email = String(b.email || "").trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { success: false, message: "Email non valida." };
+  aggiungi(FOGLIO_DOCENTI, { nome, email });
+  return { success: true };
+}
+
+// Elimina il docente e le sue fasce; rifiuta se ha prenotazioni
+function eliminaDocente(b) {
+  const id = String(b.id);
+  if (leggi(FOGLIO_PRENOTAZIONI).some(p => String(p.docente_id) === id)) {
+    return { success: false, message: "Il docente ha prenotazioni o slot chiusi: annullali prima." };
+  }
+  eliminaDove(FOGLIO_DISPONIBILITA, r => String(r.docente_id) === id);
+  return eliminaDove(FOGLIO_DOCENTI, r => String(r.id) === id) ? { success: true } : nonTrovato();
+}
+
 function aggiungiDisponibilita(b) {
   if (!b.docente_id || !/^\d{4}-\d{2}-\d{2}$/.test(b.data || "") ||
       !/^\d{2}:\d{2}$/.test(b.ora_inizio || "") || !/^\d{2}:\d{2}$/.test(b.ora_fine || "")) {
     return { success: false, message: "Dati non validi." };
   }
-  if (minuti(b.ora_fine) - minuti(b.ora_inizio) < 15) {
+  if (minuti(b.ora_fine) - minuti(b.ora_inizio) < DURATA_SLOT) {
     return { success: false, message: "La fascia deve durare almeno 15 minuti." };
   }
   if (!leggi(FOGLIO_DOCENTI).some(d => String(d.id) === String(b.docente_id))) {
@@ -154,14 +198,56 @@ function aggiungiDisponibilita(b) {
   return { success: true };
 }
 
-// Elimina la prima riga i cui campi chiave coincidono con quelli inviati
-function eliminaRiga(nomeFoglio, b, chiavi) {
-  const sheet = foglio(nomeFoglio);
-  const righe = leggi(nomeFoglio);
-  const i = righe.findIndex(r => chiavi.every(k => String(r[k]) === String(b[k])));
-  if (i < 0) return { success: false, message: "Elemento non trovato (forse già eliminato)." };
-  sheet.deleteRow(i + 2); // +1 intestazione, +1 base 1
-  return { success: true };
+// =====================================================
+// GOOGLE CALENDAR (attivo solo se è impostata CALENDAR_ID)
+// =====================================================
+
+function calendario() {
+  const id = PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
+  return id ? CalendarApp.getCalendarById(id) : null;
+}
+
+function creaEvento(p) {
+  try {
+    const cal = calendario();
+    if (!cal) return "";
+    const doc = leggi(FOGLIO_DOCENTI).find(d => String(d.id) === String(p.docente_id)) || {};
+    const ev = cal.createEvent(
+      `Colloquio ${doc.nome || ""} – ${p.alunno} (${p.classe})`,
+      dataOra(p.data, p.ora_inizio),
+      dataOra(p.data, p.ora_fine),
+      {
+        description: `Genitore: ${p.genitore}\nAlunno: ${p.alunno}\nClasse: ${p.classe}`,
+        guests: doc.email || "",
+        sendInvites: Boolean(doc.email)
+      }
+    );
+    return ev.getId();
+  } catch (err) {
+    console.error("Calendar:", err); // la prenotazione resta valida anche se Calendar fallisce
+    return "";
+  }
+}
+
+function eliminaEvento(eventId) {
+  try {
+    const cal = calendario();
+    const ev = cal && eventId ? cal.getEventById(eventId) : null;
+    if (ev) ev.deleteEvent();
+  } catch (err) {
+    console.error("Calendar:", err);
+  }
+}
+
+function dataOra(data, ora) {
+  const [a, m, g] = data.split("-").map(Number);
+  const [h, mi] = ora.split(":").map(Number);
+  return new Date(a, m - 1, g, h, mi); // fuso orario dello script
+}
+
+// Esegui una volta dall'editor per autorizzare l'accesso a Calendar
+function autorizzaCalendar() {
+  console.log(calendario() ? "Calendario trovato: " + calendario().getName() : "CALENDAR_ID non impostato");
 }
 
 // =====================================================
@@ -174,28 +260,38 @@ function foglio(nome) {
   return sheet;
 }
 
-// Restituisce le righe come oggetti {intestazione: valore}, date "yyyy-MM-dd" e ore "HH:mm"
+function isData(v) {
+  return Object.prototype.toString.call(v) === "[object Date]";
+}
+
+// Righe come oggetti {intestazione: valore} + _riga (numero di riga reale nel foglio).
+// Date "yyyy-MM-dd", ore "HH:mm".
 function leggi(nome) {
   const valori = foglio(nome).getDataRange().getValues();
   const intestazioni = valori.shift().map(h => String(h).trim().toLowerCase());
   const tz = Session.getScriptTimeZone();
 
   return valori
-    .filter(r => r.some(v => v !== ""))
-    .map(r => {
-      const obj = {};
-      intestazioni.forEach((h, i) => {
-        let v = r[i];
-        if (v instanceof Date) {
+    .map((r, i) => {
+      if (!r.some(v => v !== "")) return null;
+      const obj = { _riga: i + 2 };
+      intestazioni.forEach((h, j) => {
+        let v = r[j];
+        if (isData(v)) {
           // Sheets rappresenta le sole ore come date del 1899
           v = Utilities.formatDate(v, tz, v.getFullYear() < 1900 ? "HH:mm" : "yyyy-MM-dd");
+        } else if (h === "data" && v && !/^\d{4}-\d{2}-\d{2}$/.test(String(v).trim())) {
+          // date salvate come testo, es. "Thu Nov 26 2026 00:00:00 GMT+0100"
+          const d = new Date(String(v));
+          if (!isNaN(d)) v = Utilities.formatDate(d, tz, "yyyy-MM-dd");
         }
-        obj[h] = h === "timestamp" ? v : String(v).trim();
+        obj[h] = String(v).trim();
       });
       if (obj.ora_inizio) obj.ora_inizio = obj.ora_inizio.substring(0, 5).padStart(5, "0");
       if (obj.ora_fine) obj.ora_fine = obj.ora_fine.substring(0, 5).padStart(5, "0");
       return obj;
-    });
+    })
+    .filter(Boolean);
 }
 
 function aggiungi(nome, obj) {
@@ -215,6 +311,22 @@ function aggiungi(nome, obj) {
       sheet.getRange(r, i + 1).setNumberFormat("@").setValue(obj[h]);
     }
   });
+}
+
+// Elimina tutte le righe che soddisfano cond (dal basso, così i numeri di riga restano validi)
+function eliminaDove(nome, cond) {
+  const sheet = foglio(nome);
+  const righe = leggi(nome).filter(cond).reverse();
+  righe.forEach(r => sheet.deleteRow(r._riga));
+  return righe.length;
+}
+
+function stesseChiavi(r, b, chiavi) {
+  return chiavi.every(k => String(r[k]) === String(b[k]));
+}
+
+function nonTrovato() {
+  return { success: false, message: "Elemento non trovato (forse già eliminato)." };
 }
 
 function minuti(ora) {

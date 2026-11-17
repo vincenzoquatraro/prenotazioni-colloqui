@@ -248,6 +248,24 @@ select:disabled { opacity: .6; }
     opacity: .6;
 }
 
+.slot.closed {
+    background: var(--error-bg);
+    border-color: var(--error-border);
+    color: var(--error-text);
+}
+
+.tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--error-bg);
+    color: var(--error-text);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.azioni { display: flex; gap: 6px; }
+
 .empty {
     grid-column: 1 / -1;
     padding: 18px;
