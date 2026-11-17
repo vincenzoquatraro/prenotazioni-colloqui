@@ -1,138 +1,76 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Colloqui con i docenti</title>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <div class="app">
 
     <header>
         <div class="badge">COLLOQUI DOCENTI</div>
-
         <h1>Prenota il tuo colloquio</h1>
-
-        <p>
-            Scegli il docente, il giorno e uno degli
-            appuntamenti disponibili.
-        </p>
+        <p>Scegli il docente, il giorno e uno degli appuntamenti disponibili da 15 minuti.</p>
     </header>
-
 
     <main>
 
-        <!-- DOCENTE -->
         <section class="card">
-
-            <label for="docente">
-                Docente
-            </label>
-
+            <div class="step"><span class="step-num">1</span><label for="docente" style="margin:0;color:inherit;font-size:inherit">Docente</label></div>
             <select id="docente">
-                <option value="">
-                    Caricamento docenti...
-                </option>
+                <option value="">Caricamento docenti...</option>
             </select>
-
         </section>
 
-
-        <!-- DATA -->
         <section class="card">
-
-            <label for="data">
-                Data
-            </label>
-
-            <select id="data" disabled>
-                <option value="">
-                    Prima scegli un docente
-                </option>
-            </select>
-
+            <div class="step"><span class="step-num">2</span>Giorno</div>
+            <div id="date-container" class="chips" role="group" aria-label="Giorni disponibili">
+                <div class="empty">Prima scegli un docente</div>
+            </div>
         </section>
 
-
-        <!-- ORARI -->
         <section class="card">
+            <div class="step"><span class="step-num">3</span>Orario</div>
+            <div id="slot-container" class="slots" role="group" aria-label="Orari disponibili">
+                <div class="empty">Scegli docente e giorno</div>
+            </div>
+        </section>
 
-            <label>
-                Orario
-            </label>
+        <section id="dati-card" class="card hidden">
+            <div class="step"><span class="step-num">4</span>I tuoi dati</div>
 
-            <div id="slot-container" class="slots">
+            <div id="riepilogo" class="summary"></div>
 
-                <div class="empty">
-                    Scegli docente e data
-                </div>
-
+            <div class="field">
+                <label for="genitore">Nome e cognome del genitore</label>
+                <input id="genitore" type="text" placeholder="Mario Rossi" autocomplete="name">
             </div>
 
+            <div class="grid-2">
+                <div class="field">
+                    <label for="alunno">Nome e cognome dell'alunno</label>
+                    <input id="alunno" type="text" placeholder="Luca Rossi">
+                </div>
+                <div class="field">
+                    <label for="classe">Classe</label>
+                    <input id="classe" type="text" placeholder="2B">
+                </div>
+            </div>
+
+            <button id="prenota-btn" class="primary">Conferma prenotazione</button>
         </section>
 
-
-        <!-- DATI -->
-        <section id="dati-card" class="card hidden">
-
-            <label for="genitore">
-                Nome e cognome del genitore
-            </label>
-
-            <input
-                id="genitore"
-                type="text"
-                placeholder="Mario Rossi"
-                autocomplete="name"
-            >
-
-
-            <label for="alunno">
-                Nome e cognome dell'alunno
-            </label>
-
-            <input
-                id="alunno"
-                type="text"
-                placeholder="Luca Rossi"
-            >
-
-
-            <label for="classe">
-                Classe
-            </label>
-
-            <input
-                id="classe"
-                type="text"
-                placeholder="2B"
-            >
-
-
-            <button id="prenota-btn">
-                Conferma prenotazione
-            </button>
-
-        </section>
-
-
-        <!-- MESSAGGIO -->
-        <div id="message"></div>
+        <div id="message" role="status" aria-live="polite"></div>
 
     </main>
 
 </div>
 
-
 <script src="app.js"></script>
-
 </body>
 </html>

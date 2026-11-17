@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Admin colloqui</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-view" class="app">
+    <header>
+        <div class="badge">AREA RISERVATA</div>
+        <h1>Pannello docenti</h1>
+        <p>Inserisci il codice di accesso per gestire disponibilità e prenotazioni.</p>
+    </header>
+    <form id="login-form" class="card">
+        <div class="field">
+            <label for="codice">Codice di accesso</label>
+            <input id="codice" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="primary" type="submit">Accedi</button>
+    </form>
+</div>
+
+<!-- PANNELLO -->
+<div id="panel-view" class="app wide hidden">
+
+    <div class="topbar">
+        <h1>Pannello docenti</h1>
+        <button id="logout" class="btn-ghost" type="button">Esci</button>
+    </div>
+
+    <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="tab-prenotazioni" role="tab">Prenotazioni</button>
+        <button class="tab" data-tab="tab-disponibilita" role="tab">Disponibilità</button>
+    </div>
+
+    <!-- PRENOTAZIONI -->
+    <section id="tab-prenotazioni">
+        <div class="card">
+            <div class="grid-2">
+                <div class="field">
+                    <label for="f-docente">Docente</label>
+                    <select id="f-docente" class="sel-docenti" data-tutti="1"></select>
+                </div>
+                <div class="field">
+                    <label for="f-data">Data</label>
+                    <input id="f-data" type="date">
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Data</th><th>Orario</th><th>Docente</th><th>Genitore</th><th>Alunno</th><th>Classe</th><th></th></tr>
+                    </thead>
+                    <tbody id="tbody-prenotazioni"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- DISPONIBILITÀ -->
+    <section id="tab-disponibilita" class="hidden">
+        <form id="form-disp" class="card">
+            <h2>Aggiungi fascia oraria</h2>
+            <div class="field">
+                <label for="d-docente">Docente</label>
+                <select id="d-docente" class="sel-docenti" required></select>
+            </div>
+            <div class="grid-3">
+                <div class="field">
+                    <label for="d-data">Giorno</label>
+                    <input id="d-data" type="date" required>
+                </div>
+                <div class="field">
+                    <label for="d-inizio">Dalle</label>
+                    <input id="d-inizio" type="time" step="900" required>
+                </div>
+                <div class="field">
+                    <label for="d-fine">Alle</label>
+                    <input id="d-fine" type="time" step="900" required>
+                </div>
+            </div>
+            <button class="primary" type="submit">Aggiungi fascia</button>
+        </form>
+
+        <div class="card">
+            <h2>Fasce esistenti</h2>
+            <div class="field">
+                <label for="fd-docente">Docente</label>
+                <select id="fd-docente" class="sel-docenti" data-tutti="1"></select>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Data</th><th>Orario</th><th>Docente</th><th>Prenotati</th><th></th></tr>
+                    </thead>
+                    <tbody id="tbody-disponibilita"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>
