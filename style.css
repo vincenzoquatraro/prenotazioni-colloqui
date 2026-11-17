@@ -347,6 +347,28 @@ button:focus-visible,
 
 /* ---------- Admin ---------- */
 
+.admin-link {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    box-shadow: var(--shadow);
+    transition: color .15s, border-color .15s;
+}
+
+.admin-link:hover,
+.admin-link:focus-visible {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
 .topbar {
     display: flex;
     justify-content: space-between;
