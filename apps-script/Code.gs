@@ -245,9 +245,33 @@ function dataOra(data, ora) {
   return new Date(a, m - 1, g, h, mi); // fuso orario dello script
 }
 
-// Esegui una volta dall'editor per autorizzare l'accesso a Calendar
+// Esegui dall'editor: autorizza Calendar e mostra nel log cosa non va
 function autorizzaCalendar() {
-  console.log(calendario() ? "Calendario trovato: " + calendario().getName() : "CALENDAR_ID non impostato");
+  const id = PropertiesService.getScriptProperties().getProperty("CALENDAR_ID");
+  if (!id) throw new Error("Proprietà CALENDAR_ID non impostata.");
+  const cal = CalendarApp.getCalendarById(id);
+  if (!cal) throw new Error("Calendario non trovato o non accessibile con questo account: " + id);
+  const ora = new Date();
+  cal.createEvent("Test colloqui (eliminato subito)", ora, new Date(ora.getTime() + 60000)).deleteEvent();
+  console.log("OK: eventi creabili in " + cal.getName());
+}
+
+// Esegui dall'editor: crea l'evento per le prenotazioni che non ce l'hanno
+function sincronizzaCalendar() {
+  const sheet = foglio(FOGLIO_PRENOTAZIONI);
+  const intestazioni = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(h => String(h).trim().toLowerCase());
+  const col = intestazioni.indexOf("event_id") + 1;
+  if (!col) throw new Error("Aggiungi la colonna event_id al foglio Prenotazioni.");
+
+  let n = 0;
+  leggi(FOGLIO_PRENOTAZIONI)
+    .filter(p => !p.event_id && p.genitore !== BLOCCO)
+    .forEach(p => {
+      const id = creaEvento(p);
+      if (id) { sheet.getRange(p._riga, col).setValue(id); n++; }
+    });
+  console.log(n + " eventi creati.");
 }
 
 // =====================================================
