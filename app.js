@@ -5,37 +5,21 @@
 const API_URL =
     "https://script.google.com/macros/s/AKfycbyO2DIsz-KfmiQDuwRK_vp-80McO5Ohtm9usOv1FRCWVGjloTL0K27j0yI992z1F_QM/exec";
 
-
 // =====================================================
 // ELEMENTI HTML
 // =====================================================
 
-const docenteSelect =
-    document.getElementById("docente");
+const docenteSelect = document.getElementById("docente");
+const dataSelect = document.getElementById("data");
+const slotContainer = document.getElementById("slot-container");
+const datiCard = document.getElementById("dati-card");
 
-const dataSelect =
-    document.getElementById("data");
+const genitoreInput = document.getElementById("genitore");
+const alunnoInput = document.getElementById("alunno");
+const classeInput = document.getElementById("classe");
 
-const slotContainer =
-    document.getElementById("slot-container");
-
-const datiCard =
-    document.getElementById("dati-card");
-
-const genitoreInput =
-    document.getElementById("genitore");
-
-const alunnoInput =
-    document.getElementById("alunno");
-
-const classeInput =
-    document.getElementById("classe");
-
-const prenotaBtn =
-    document.getElementById("prenota-btn");
-
-const message =
-    document.getElementById("message");
+const prenotaBtn = document.getElementById("prenota-btn");
+const message = document.getElementById("message");
 
 
 // =====================================================
@@ -43,9 +27,7 @@ const message =
 // =====================================================
 
 let docenti = [];
-
 let disponibilita = [];
-
 let prenotazioni = [];
 
 let slotSelezionato = null;
@@ -55,66 +37,69 @@ let slotSelezionato = null;
 // AVVIO
 // =====================================================
 
-document.addEventListener(
-    "DOMContentLoaded",
-    caricaDati
-);
+document.addEventListener("DOMContentLoaded", caricaDati);
 
 
 // =====================================================
-// CARICA I DATI
+// CARICAMENTO DATI DA GOOGLE APPS SCRIPT
 // =====================================================
 
 async function caricaDati() {
 
     try {
 
-        mostraMessaggio(
-            "Caricamento...",
-            "success"
-        );
+        message.innerHTML = "";
+        docenteSelect.innerHTML = `
+            <option value="">Caricamento...</option>
+        `;
 
-        const response =
-            await fetch(API_URL);
+        const response = await fetch(API_URL);
 
-        const data =
-            await response.json();
-
-        if (!data.success) {
-            throw new Error(data.message);
+        if (!response.ok) {
+            throw new Error(
+                `Errore HTTP ${response.status}`
+            );
         }
 
-        docenti =
-            data.docenti;
+        const data = await response.json();
 
-        disponibilita =
-            data.disponibilita;
+        console.log("Dati ricevuti da Apps Script:", data);
 
-        prenotazioni =
-            data.prenotazioni;
+        if (!data.success) {
+            throw new Error(
+                data.message || "Errore Apps Script"
+            );
+        }
+
+        docenti = data.docenti || [];
+        disponibilita = data.disponibilita || [];
+        prenotazioni = data.prenotazioni || [];
 
         popolaDocenti();
 
-        message.innerHTML = "";
+    } catch (error) {
 
-    }
+        console.error(
+            "Errore caricamento:",
+            error
+        );
 
-    catch (error) {
-
-        console.error(error);
+        docenteSelect.innerHTML = `
+            <option value="">
+                Errore caricamento
+            </option>
+        `;
 
         mostraMessaggio(
             "Non riesco a collegarmi al sistema di prenotazione.",
             "error"
         );
-
     }
-
 }
 
 
 // =====================================================
-// DOCENTI
+// POPOLA DOCENTI
 // =====================================================
 
 function popolaDocenti() {
@@ -125,7 +110,7 @@ function popolaDocenti() {
         </option>
     `;
 
-    docenti.forEach(docente => {
+    docenti.forEach(function(docente) {
 
         const option =
             document.createElement("option");
@@ -137,7 +122,6 @@ function popolaDocenti() {
             docente.nome;
 
         docenteSelect.appendChild(option);
-
     });
 }
 
@@ -146,67 +130,68 @@ function popolaDocenti() {
 // CAMBIO DOCENTE
 // =====================================================
 
-docenteSelect.addEventListener(
-    "change",
-    () => {
+docenteSelect.addEventListener("change", function() {
 
-        slotSelezionato = null;
+    slotSelezionato = null;
 
-        datiCard.classList.add("hidden");
+    datiCard.classList.add("hidden");
 
-        dataSelect.innerHTML = `
-            <option value="">
-                Seleziona una data
-            </option>
-        `;
+    dataSelect.innerHTML = `
+        <option value="">
+            Seleziona una data
+        </option>
+    `;
 
-        dataSelect.disabled = true;
+    dataSelect.disabled = true;
 
-        slotContainer.innerHTML = `
-            <div class="empty">
-                Scegli una data
-            </div>
-        `;
+    slotContainer.innerHTML = `
+        <div class="empty">
+            Scegli una data
+        </div>
+    `;
 
-        const docenteId =
-            docenteSelect.value;
+    const docenteId =
+        docenteSelect.value;
 
-        if (!docenteId) {
-            return;
-        }
+    if (!docenteId) {
+        return;
+    }
 
-        const date =
-            disponibilita
-                .filter(x =>
-                    String(x.docente_id) ===
-                    String(docenteId)
-                )
-                .map(x => x.data);
+    const date = disponibilita
+        .filter(function(item) {
 
-        const dateUniche =
-            [...new Set(date)];
+            return String(item.docente_id) ===
+                   String(docenteId);
 
-        dateUniche.sort();
+        })
+        .map(function(item) {
 
-        dateUniche.forEach(data => {
-
-            const option =
-                document.createElement("option");
-
-            option.value = data;
-
-            option.textContent =
-                formattaData(data);
-
-            dataSelect.appendChild(option);
+            return normalizzaData(item.data);
 
         });
 
-        dataSelect.disabled =
-            dateUniche.length === 0;
+    const dateUniche =
+        [...new Set(date)];
 
-    }
-);
+    dateUniche.sort();
+
+    dateUniche.forEach(function(data) {
+
+        const option =
+            document.createElement("option");
+
+        option.value =
+            data;
+
+        option.textContent =
+            formattaData(data);
+
+        dataSelect.appendChild(option);
+    });
+
+    dataSelect.disabled =
+        dateUniche.length === 0;
+});
 
 
 // =====================================================
@@ -220,7 +205,7 @@ dataSelect.addEventListener(
 
 
 // =====================================================
-// GENERAZIONE SLOT
+// MOSTRA SLOT
 // =====================================================
 
 function mostraSlot() {
@@ -249,49 +234,62 @@ function mostraSlot() {
     }
 
 
-    const disponibilitaDocente =
-        disponibilita.filter(x =>
-            String(x.docente_id) ===
-                String(docenteId)
-            &&
-            x.data === data
-        );
+    const fasce =
+        disponibilita.filter(function(item) {
+
+            return (
+                String(item.docente_id) ===
+                    String(docenteId)
+                &&
+                normalizzaData(item.data) ===
+                    data
+            );
+
+        });
 
 
-    const slot = [];
+    const slots = [];
 
 
-    disponibilitaDocente.forEach(fascia => {
+    fasce.forEach(function(fascia) {
 
-        let current =
-            convertiMinuti(fascia.ora_inizio);
+        let corrente =
+            convertiMinuti(
+                fascia.ora_inizio
+            );
 
         const fine =
-            convertiMinuti(fascia.ora_fine);
+            convertiMinuti(
+                fascia.ora_fine
+            );
 
 
-        while (current < fine) {
+        while (corrente < fine) {
 
-            const start =
-                minutiToOra(current);
+            const oraInizio =
+                minutiToOra(corrente);
 
-            const end =
-                minutiToOra(current + 15);
+            const oraFine =
+                minutiToOra(corrente + 15);
 
-            slot.push({
+            slots.push({
+
                 data: data,
-                ora_inizio: start,
-                ora_fine: end
+
+                ora_inizio:
+                    oraInizio,
+
+                ora_fine:
+                    oraFine
+
             });
 
-            current += 15;
-
+            corrente += 15;
         }
-
     });
 
 
-    if (slot.length === 0) {
+    if (slots.length === 0) {
 
         slotContainer.innerHTML = `
             <div class="empty">
@@ -303,67 +301,81 @@ function mostraSlot() {
     }
 
 
-    slot.forEach(s => {
+    slots.forEach(function(slot) {
 
         const button =
             document.createElement("button");
 
-        button.type = "button";
+        button.type =
+            "button";
 
-        button.className = "slot";
+        button.className =
+            "slot";
 
         button.textContent =
-            `${s.ora_inizio} – ${s.ora_fine}`;
+            `${slot.ora_inizio} – ${slot.ora_fine}`;
 
 
-        const prenotato =
-            prenotazioni.some(p =>
-                String(p.docente_id) ===
-                    String(docenteId)
-                &&
-                p.data === data
-                &&
-                p.ora_inizio ===
-                    s.ora_inizio
-            );
+        const giaPrenotato =
+            prenotazioni.some(function(p) {
+
+                return (
+                    String(p.docente_id) ===
+                        String(docenteId)
+                    &&
+                    normalizzaData(p.data) ===
+                        data
+                    &&
+                    normalizzaOra(p.ora_inizio) ===
+                        slot.ora_inizio
+                );
+
+            });
 
 
-        if (prenotato) {
+        if (giaPrenotato) {
 
             button.classList.add("booked");
 
             button.disabled = true;
 
-        }
-
-        else {
+        } else {
 
             button.addEventListener(
                 "click",
-                () => selezionaSlot(button, s)
-            );
+                function() {
 
+                    selezionaSlot(
+                        button,
+                        slot
+                    );
+
+                }
+            );
         }
 
 
         slotContainer.appendChild(button);
-
     });
-
 }
 
 
 // =====================================================
-// SELEZIONE SLOT
+// SELEZIONA SLOT
 // =====================================================
 
 function selezionaSlot(button, slot) {
 
     document
         .querySelectorAll(".slot.selected")
-        .forEach(x =>
-            x.classList.remove("selected")
-        );
+        .forEach(function(element) {
+
+            element.classList.remove(
+                "selected"
+            );
+
+        });
+
 
     button.classList.add("selected");
 
@@ -376,12 +388,11 @@ function selezionaSlot(button, slot) {
         behavior: "smooth",
         block: "center"
     });
-
 }
 
 
 // =====================================================
-// PRENOTAZIONE
+// PRENOTA
 // =====================================================
 
 prenotaBtn.addEventListener(
@@ -413,9 +424,11 @@ async function prenota() {
         classeInput.value.trim();
 
 
-    if (!genitore ||
+    if (
+        !genitore ||
         !alunno ||
-        !classe) {
+        !classe
+    ) {
 
         mostraMessaggio(
             "Compila tutti i campi.",
@@ -485,29 +498,49 @@ async function prenota() {
 
 
         const docente =
-            docenti.find(x =>
-                String(x.id) ===
-                String(docenteSelect.value)
-            );
+            docenti.find(function(item) {
+
+                return String(item.id) ===
+                       String(docenteSelect.value);
+
+            });
 
 
-        mostraMessaggio(`
+        mostraMessaggio(
+
+            `
             <strong>✓ Prenotazione confermata</strong>
+
             <br><br>
+
             ${escapeHtml(docente.nome)}
+
             <br>
-            ${formattaData(slotSelezionato.data)}
+
+            ${formattaData(
+                slotSelezionato.data
+            )}
+
             <br>
+
             ${slotSelezionato.ora_inizio}
             –
             ${slotSelezionato.ora_fine}
+
             <br><br>
+
             Alunno:
             ${escapeHtml(alunno)}
-        `, "success");
+            `,
+
+            "success"
+
+        );
 
 
-        datiCard.classList.add("hidden");
+        datiCard.classList.add(
+            "hidden"
+        );
 
         slotSelezionato = null;
 
@@ -521,7 +554,10 @@ async function prenota() {
 
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "Errore prenotazione:",
+            error
+        );
 
         mostraMessaggio(
             "Si è verificato un errore durante la prenotazione.",
@@ -532,13 +568,13 @@ async function prenota() {
 
     finally {
 
-        prenotaBtn.disabled = false;
+        prenotaBtn.disabled =
+            false;
 
         prenotaBtn.textContent =
             "Conferma prenotazione";
 
     }
-
 }
 
 
@@ -548,36 +584,96 @@ async function prenota() {
 
 function convertiMinuti(ora) {
 
-    const [h, m] =
-        ora.split(":").map(Number);
+    const parti =
+        String(ora)
+            .substring(0, 5)
+            .split(":");
 
-    return h * 60 + m;
+    const ore =
+        Number(parti[0]);
 
+    const minuti =
+        Number(parti[1]);
+
+    return ore * 60 + minuti;
 }
 
 
 function minutiToOra(minuti) {
 
-    const h =
+    const ore =
         Math.floor(minuti / 60);
 
-    const m =
+    const minutiRimanenti =
         minuti % 60;
 
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    return (
+        String(ore).padStart(2, "0")
+        +
+        ":"
+        +
+        String(minutiRimanenti)
+            .padStart(2, "0")
+    );
+}
 
+
+function normalizzaData(data) {
+
+    if (!data) {
+        return "";
+    }
+
+    const testo =
+        String(data);
+
+    // Se è già yyyy-mm-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(testo)) {
+        return testo;
+    }
+
+    return testo.substring(0, 10);
+}
+
+
+function normalizzaOra(ora) {
+
+    if (!ora) {
+        return "";
+    }
+
+    return String(ora).substring(0, 5);
 }
 
 
 function formattaData(data) {
 
-    const [anno, mese, giorno] =
-        data.split("-").map(Number);
+    const parti =
+        String(data).split("-");
 
-    const d =
-        new Date(anno, mese - 1, giorno);
+    if (parti.length !== 3) {
+        return data;
+    }
 
-    return d.toLocaleDateString(
+    const anno =
+        Number(parti[0]);
+
+    const mese =
+        Number(parti[1]);
+
+    const giorno =
+        Number(parti[2]);
+
+
+    const date =
+        new Date(
+            anno,
+            mese - 1,
+            giorno
+        );
+
+
+    return date.toLocaleDateString(
         "it-IT",
         {
             weekday: "long",
@@ -585,7 +681,6 @@ function formattaData(data) {
             month: "long"
         }
     );
-
 }
 
 
@@ -594,10 +689,11 @@ function mostraMessaggio(
     tipo
 ) {
 
-    message.className = tipo;
+    message.className =
+        tipo;
 
-    message.innerHTML = testo;
-
+    message.innerHTML =
+        testo;
 }
 
 
@@ -610,5 +706,4 @@ function escapeHtml(text) {
         text;
 
     return div.innerHTML;
-
 }
