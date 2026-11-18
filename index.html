@@ -16,11 +16,8 @@
         <div class="hero-top">
             <button id="hero-back" class="hero-btn hidden" type="button" aria-label="Indietro">‹</button>
             <h1 class="hero-title">Prenotazione colloqui</h1>
-            <a href="admin.html" class="hero-btn" aria-label="Area docenti" title="Area docenti">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            </a>
         </div>
-        <div id="hero-sel" class="hero-sel hidden">
+        <div id="hero-sel" class="hero-sel invisible">
             <span id="hero-avatar"></span>
             <div>
                 <div id="hero-titolo" class="hero-label"></div>
@@ -37,7 +34,12 @@
 <main class="app">
 
     <section id="view-docenti" class="view">
-        <h2 class="view-title">Scegli la maestra</h2>
+        <div class="view-head">
+            <h2 class="view-title">Scegli la maestra</h2>
+            <a href="admin.html" class="back" aria-label="Area docenti" title="Area docenti">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </a>
+        </div>
         <div id="docenti-grid" class="teacher-grid">
             <div class="teacher-card skeleton-card"></div>
             <div class="teacher-card skeleton-card"></div>

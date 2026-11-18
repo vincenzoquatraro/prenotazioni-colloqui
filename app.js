@@ -88,7 +88,7 @@ function mostraVista(id) {
 function renderHero(concluso = false) {
     const passo = ORDINE_VISTE.indexOf(vista);
     $("hero-back").classList.toggle("hidden", passo === 0 || concluso);
-    $("hero-sel").classList.toggle("hidden", passo === 0);
+    $("hero-sel").classList.toggle("invisible", passo === 0);
     $("chip-giorno").classList.toggle("hidden", passo < 2);
     $("chip-ora").classList.toggle("hidden", passo < 3);
 }
