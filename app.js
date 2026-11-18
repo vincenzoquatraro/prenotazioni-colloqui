@@ -11,27 +11,34 @@ const DURATA_SLOT = 15;
 // ELEMENTI E STATO
 // =====================================================
 
-const docenteSelect = document.getElementById("docente");
-const dateContainer = document.getElementById("date-container");
-const slotContainer = document.getElementById("slot-container");
-const datiCard = document.getElementById("dati-card");
-const riepilogo = document.getElementById("riepilogo");
-const genitoreInput = document.getElementById("genitore");
-const alunnoInput = document.getElementById("alunno");
-const classeInput = document.getElementById("classe");
-const prenotaBtn = document.getElementById("prenota-btn");
-const message = document.getElementById("message");
+const $ = id => document.getElementById(id);
+
+const slotContainer = $("slot-container");
+const datiCard = $("dati-card");
+const genitoreInput = $("genitore");
+const alunnoInput = $("alunno");
+const classeInput = $("classe");
+const prenotaBtn = $("prenota-btn");
+const message = $("message");
 
 let docenti = [];
 let disponibilita = [];
 let prenotazioni = [];
 
-let dataSelezionata = "";
+let docente = null;          // maestra selezionata
+let dataSelezionata = "";    // yyyy-mm-dd
 let slotSelezionato = null;
+let meseVisto = null;        // Date al primo del mese mostrato
 
 document.addEventListener("DOMContentLoaded", caricaDati);
-docenteSelect.addEventListener("change", mostraDate);
 prenotaBtn.addEventListener("click", prenota);
+
+document.querySelectorAll("[data-back]").forEach(btn =>
+    btn.addEventListener("click", () => mostraVista(btn.dataset.back))
+);
+
+$("cal-prev").addEventListener("click", () => cambiaMese(-1));
+$("cal-next").addEventListener("click", () => cambiaMese(1));
 
 // =====================================================
 // CARICAMENTO DATI
@@ -49,112 +56,142 @@ async function caricaDati() {
         disponibilita = data.disponibilita || [];
         prenotazioni = data.prenotazioni || [];
 
-        popolaDocenti();
+        renderDocenti();
     } catch (error) {
         console.error("Errore caricamento:", error);
-        docenteSelect.innerHTML = `<option value="">Errore caricamento</option>`;
+        $("docenti-grid").innerHTML = "";
         mostraMessaggio("Non riesco a collegarmi al sistema di prenotazione. Riprova tra poco.", "error");
     }
 }
 
-function popolaDocenti() {
-    const selezionato = docenteSelect.value;
+// =====================================================
+// NAVIGAZIONE
+// =====================================================
 
-    docenteSelect.innerHTML = `<option value="">Seleziona un docente</option>`;
-    docenti.forEach(function(docente) {
-        docenteSelect.appendChild(new Option(docente.nome, docente.id));
-    });
-
-    // dopo un ricaricamento mantiene la scelta corrente
-    if (selezionato) {
-        docenteSelect.value = selezionato;
-        mostraDate(false);
-    }
+function mostraVista(id) {
+    document.querySelectorAll(".view").forEach(v => v.classList.toggle("hidden", v.id !== id));
+    if (id !== "view-orari") nascondiDati();
+    if (id === "view-calendario") renderCalendario();
+    message.innerHTML = "";
+    message.className = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 // =====================================================
-// DATE
+// 1. MAESTRE
 // =====================================================
 
-function mostraDate(reset = true) {
-    if (reset !== false) {
-        dataSelezionata = "";
-        message.innerHTML = "";
-        message.className = "";
-    }
-    nascondiDati();
+function renderDocenti() {
+    const grid = $("docenti-grid");
+    grid.innerHTML = "";
 
-    const docenteId = docenteSelect.value;
-    if (!docenteId) {
-        dateContainer.innerHTML = `<div class="empty">Prima scegli un docente</div>`;
-        slotContainer.innerHTML = `<div class="empty">Scegli docente e giorno</div>`;
+    if (docenti.length === 0) {
+        grid.innerHTML = `<div class="empty">Nessun docente disponibile</div>`;
         return;
     }
 
+    docenti.forEach(function(d) {
+        const giorni = giorniLiberi(d.id).length;
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "teacher-card";
+        card.disabled = giorni === 0;
+        card.innerHTML = `
+            ${avatar(d)}
+            <span class="teacher-name">${escapeHtml(d.nome)}</span>
+            <span class="teacher-meta">${giorni === 0 ? "Nessuna data libera" : giorni === 1 ? "1 giorno disponibile" : `${giorni} giorni disponibili`}</span>`;
+        card.addEventListener("click", () => scegliDocente(d));
+        grid.appendChild(card);
+    });
+}
+
+function scegliDocente(d) {
+    docente = d;
+    dataSelezionata = "";
+    const primo = giorniLiberi(d.id)[0];
+    meseVisto = primo ? inizioMese(dataLocale(primo)) : inizioMese(new Date());
+
+    document.querySelectorAll(".who").forEach(el => {
+        el.innerHTML = `${avatar(d, "sm")}<span>${escapeHtml(d.nome)}</span>`;
+    });
+    mostraVista("view-calendario");
+}
+
+// =====================================================
+// 2. CALENDARIO
+// =====================================================
+
+function cambiaMese(delta) {
+    meseVisto = new Date(meseVisto.getFullYear(), meseVisto.getMonth() + delta, 1);
+    renderCalendario();
+}
+
+function renderCalendario() {
+    const liberi = new Set(giorniLiberi(docente.id));
+    const conFasce = new Set(giorniDocente(docente.id));
+    const anno = meseVisto.getFullYear();
+    const mese = meseVisto.getMonth();
     const oggi = oggiIso();
-    const date = [...new Set(
-        disponibilita
-            .filter(d => String(d.docente_id) === String(docenteId))
-            .map(d => normalizzaData(d.data))
-            .filter(d => d >= oggi)
-    )].sort();
 
-    dateContainer.innerHTML = "";
+    $("cal-titolo").textContent = meseVisto.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
 
-    if (date.length === 0) {
-        dateContainer.innerHTML = `<div class="empty">Nessun giorno disponibile per questo docente</div>`;
-        slotContainer.innerHTML = `<div class="empty">—</div>`;
-        return;
-    }
+    const fineMese = isoDa(new Date(anno, mese + 1, 0));
+    $("cal-prev").disabled = isoDa(meseVisto) <= oggi.substring(0, 8) + "01";
+    $("cal-next").disabled = ![...liberi].some(g => g > fineMese);
 
-    date.forEach(function(data) {
-        const [giorno, resto] = etichettaData(data);
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "chip" + (data === dataSelezionata ? " selected" : "");
-        chip.innerHTML = `${resto}<small>${giorno}</small>`;
-        chip.setAttribute("aria-pressed", data === dataSelezionata);
-        chip.addEventListener("click", function() {
-            dataSelezionata = data;
-            dateContainer.querySelectorAll(".chip").forEach(c => {
-                c.classList.toggle("selected", c === chip);
-                c.setAttribute("aria-pressed", c === chip);
-            });
-            mostraSlot();
-        });
-        dateContainer.appendChild(chip);
-    });
+    const grid = $("calendario");
+    grid.innerHTML = ["L", "M", "M", "G", "V", "S", "D"]
+        .map(g => `<div class="cal-dow">${g}</div>`).join("");
 
-    if (dataSelezionata && date.includes(dataSelezionata)) {
-        mostraSlot();
-    } else {
-        dataSelezionata = "";
-        slotContainer.innerHTML = `<div class="empty">Scegli un giorno</div>`;
+    // lunedì come primo giorno della settimana
+    const offset = (new Date(anno, mese, 1).getDay() + 6) % 7;
+    for (let i = 0; i < offset; i++) grid.insertAdjacentHTML("beforeend", `<div></div>`);
+
+    const giorniNelMese = new Date(anno, mese + 1, 0).getDate();
+    for (let g = 1; g <= giorniNelMese; g++) {
+        const iso = isoDa(new Date(anno, mese, g));
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "cal-day";
+        btn.textContent = g;
+
+        if (iso === oggi) btn.classList.add("today");
+
+        if (liberi.has(iso)) {
+            btn.classList.add("available");
+            btn.setAttribute("aria-label", formattaData(iso) + ", posti liberi");
+            btn.addEventListener("click", () => scegliGiorno(iso));
+        } else {
+            btn.disabled = true;
+            if (conFasce.has(iso) && iso >= oggi) {
+                btn.classList.add("full");
+                btn.title = "Tutto prenotato";
+            }
+        }
+        grid.appendChild(btn);
     }
 }
 
 // =====================================================
-// SLOT
+// 3. ORARI
 // =====================================================
 
-function mostraSlot() {
+function scegliGiorno(iso) {
+    dataSelezionata = iso;
+    const d = dataLocale(iso);
+    $("giorno-settimana").textContent = d.toLocaleDateString("it-IT", { weekday: "long" });
+    $("giorno-numero").textContent = d.getDate();
+    $("giorno-mese").textContent = d.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+
+    mostraVista("view-orari");
+    renderSlot();
+}
+
+function renderSlot() {
     nascondiDati();
     slotContainer.innerHTML = "";
 
-    const docenteId = docenteSelect.value;
-    const data = dataSelezionata;
-
-    const slots = [];
-    disponibilita
-        .filter(d => String(d.docente_id) === String(docenteId) && normalizzaData(d.data) === data)
-        .forEach(function(fascia) {
-            const fine = convertiMinuti(fascia.ora_fine);
-            for (let t = convertiMinuti(fascia.ora_inizio); t + DURATA_SLOT <= fine; t += DURATA_SLOT) {
-                slots.push({ data, ora_inizio: minutiToOra(t), ora_fine: minutiToOra(t + DURATA_SLOT) });
-            }
-        });
-
-    slots.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
+    const slots = calcolaSlot(docente.id, dataSelezionata);
 
     if (slots.length === 0) {
         slotContainer.innerHTML = `<div class="empty">Nessun appuntamento disponibile</div>`;
@@ -167,20 +204,13 @@ function mostraSlot() {
         button.className = "slot";
         button.textContent = `${slot.ora_inizio} – ${slot.ora_fine}`;
 
-        const giaPrenotato = prenotazioni.some(p =>
-            String(p.docente_id) === String(docenteId) &&
-            normalizzaData(p.data) === data &&
-            normalizzaOra(p.ora_inizio) === slot.ora_inizio
-        );
-
-        if (giaPrenotato) {
+        if (slot.occupato) {
             button.classList.add("booked");
             button.disabled = true;
             button.title = "Già prenotato";
         } else {
             button.addEventListener("click", () => selezionaSlot(button, slot));
         }
-
         slotContainer.appendChild(button);
     });
 }
@@ -190,9 +220,7 @@ function selezionaSlot(button, slot) {
     button.classList.add("selected");
     slotSelezionato = slot;
 
-    const docente = docenti.find(d => String(d.id) === String(docenteSelect.value));
-    riepilogo.textContent =
-        `${docente ? docente.nome : ""} · ${formattaData(slot.data)} · ${slot.ora_inizio} – ${slot.ora_fine}`;
+    $("riepilogo").textContent = `${docente.nome} · ${formattaData(slot.data)} · ${slot.ora_inizio} – ${slot.ora_fine}`;
 
     datiCard.classList.remove("hidden");
     datiCard.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -227,13 +255,12 @@ async function prenota() {
     prenotaBtn.textContent = "Prenotazione in corso...";
 
     const slot = slotSelezionato;
-    const docente = docenti.find(d => String(d.id) === String(docenteSelect.value));
 
     try {
         const response = await fetch(API_URL, {
             method: "POST",
             body: JSON.stringify({
-                docente_id: docenteSelect.value,
+                docente_id: docente.id,
                 data: slot.data,
                 ora_inizio: slot.ora_inizio,
                 ora_fine: slot.ora_fine,
@@ -246,8 +273,9 @@ async function prenota() {
         const result = await response.json();
 
         if (!result.success) {
-            mostraMessaggio(escapeHtml(result.message || "Prenotazione non riuscita."), "error");
             await caricaDati();
+            renderSlot();
+            mostraMessaggio(escapeHtml(result.message || "Prenotazione non riuscita."), "error");
             return;
         }
 
@@ -256,10 +284,11 @@ async function prenota() {
         classeInput.value = "";
 
         await caricaDati();
+        renderSlot();
 
         mostraMessaggio(`
             <strong>✓ Prenotazione confermata</strong><br><br>
-            ${escapeHtml(docente ? docente.nome : "")}<br>
+            ${escapeHtml(docente.nome)}<br>
             <span style="text-transform:capitalize">${formattaData(slot.data)}</span>, ${slot.ora_inizio} – ${slot.ora_fine}<br><br>
             Alunno: ${escapeHtml(alunno)} (${escapeHtml(classe)})
         `, "success");
@@ -274,8 +303,59 @@ async function prenota() {
 }
 
 // =====================================================
+// CALCOLI SU DISPONIBILITÀ
+// =====================================================
+
+function giorniDocente(docenteId) {
+    return [...new Set(
+        disponibilita
+            .filter(d => String(d.docente_id) === String(docenteId))
+            .map(d => normalizzaData(d.data))
+    )].sort();
+}
+
+// giorni futuri con almeno uno slot libero
+function giorniLiberi(docenteId) {
+    const oggi = oggiIso();
+    return giorniDocente(docenteId)
+        .filter(g => g >= oggi && calcolaSlot(docenteId, g).some(s => !s.occupato));
+}
+
+function calcolaSlot(docenteId, data) {
+    const slots = [];
+    disponibilita
+        .filter(d => String(d.docente_id) === String(docenteId) && normalizzaData(d.data) === data)
+        .forEach(function(fascia) {
+            const fine = convertiMinuti(fascia.ora_fine);
+            for (let t = convertiMinuti(fascia.ora_inizio); t + DURATA_SLOT <= fine; t += DURATA_SLOT) {
+                const ora_inizio = minutiToOra(t);
+                slots.push({
+                    data,
+                    ora_inizio,
+                    ora_fine: minutiToOra(t + DURATA_SLOT),
+                    occupato: prenotazioni.some(p =>
+                        String(p.docente_id) === String(docenteId) &&
+                        normalizzaData(p.data) === data &&
+                        normalizzaOra(p.ora_inizio) === ora_inizio
+                    )
+                });
+            }
+        });
+    return slots.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
+}
+
+// =====================================================
 // UTILITÀ
 // =====================================================
+
+function avatar(d, size = "") {
+    const cls = `avatar ${size}`;
+    if (d.foto) return `<img class="${cls}" src="${escapeHtml(d.foto).replace(/"/g, "&quot;")}" alt="">`;
+    // iniziali senza titoli tipo "Prof.ssa", "Maestra"
+    const parole = String(d.nome).split(/\s+/).filter(p => p && !p.endsWith(".") && !/^maestr[ao]$/i.test(p));
+    const iniziali = (parole.length ? parole : [d.nome]).slice(0, 2).map(p => p[0].toUpperCase()).join("");
+    return `<span class="${cls}" aria-hidden="true">${escapeHtml(iniziali)}</span>`;
+}
 
 function convertiMinuti(ora) {
     const [h, m] = String(ora).substring(0, 5).split(":").map(Number);
@@ -292,17 +372,23 @@ function normalizzaData(data) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(testo)) return testo;
     // Date di Sheets serializzate (ISO UTC o "Wed Nov 25 2026 ..."): converti in giorno locale
     const d = new Date(testo);
-    if (isNaN(d)) return testo.substring(0, 10);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return isNaN(d) ? testo.substring(0, 10) : isoDa(d);
 }
 
 function normalizzaOra(ora) {
     return ora ? String(ora).substring(0, 5) : "";
 }
 
-function oggiIso() {
-    const d = new Date();
+function isoDa(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function oggiIso() {
+    return isoDa(new Date());
+}
+
+function inizioMese(d) {
+    return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
 function dataLocale(data) {
@@ -312,14 +398,6 @@ function dataLocale(data) {
 
 function formattaData(data) {
     return dataLocale(data).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
-}
-
-function etichettaData(data) {
-    const d = dataLocale(data);
-    return [
-        d.toLocaleDateString("it-IT", { weekday: "short" }),
-        d.toLocaleDateString("it-IT", { day: "numeric", month: "short" })
-    ];
 }
 
 function mostraMessaggio(html, tipo) {

@@ -77,8 +77,8 @@ header {
     width: 120px;
     height: auto;
     margin: 0 auto 18px;
-    padding: 14px;
-    border-radius: 50%;
+    padding: 12px;
+    border-radius: 28px; /* quadrato arrotondato: un cerchio taglierebbe la scritta del logo */
     background: #fff;
     box-shadow: 0 0 0 6px var(--primary-soft), var(--shadow);
 }
@@ -89,7 +89,7 @@ header {
     padding: 4px;
     margin-right: 10px;
     vertical-align: middle;
-    border-radius: 50%;
+    border-radius: 10px;
     background: #fff;
 }
 
@@ -391,6 +391,234 @@ button:focus-visible,
 }
 
 @keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ---------- Viste genitori ---------- */
+
+.view { animation: fade .3s ease; }
+
+.view-title {
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 18px;
+}
+
+.teacher-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+.teacher-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    min-height: 190px;
+    padding: 22px 14px;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--pink);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+
+.teacher-card:hover:not(:disabled) {
+    transform: translateY(-3px);
+    border-color: var(--primary);
+}
+
+.teacher-card:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+.teacher-card:disabled { opacity: .5; cursor: not-allowed; }
+
+.teacher-name { font-weight: 800; font-size: 16px; }
+
+.teacher-meta { font-size: 13px; color: var(--muted); }
+
+.skeleton-card {
+    background: linear-gradient(90deg, var(--surface), var(--surface-2), var(--surface));
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+    cursor: default;
+}
+
+.avatar {
+    display: grid;
+    place-items: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-size: 28px;
+    font-weight: 800;
+    box-shadow: 0 0 0 4px var(--surface), 0 0 0 6px var(--pink);
+    flex: none;
+}
+
+.avatar.sm {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--pink);
+}
+
+.view-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.who {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 19px;
+    font-weight: 800;
+}
+
+.back {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+}
+
+.back:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+
+.back:disabled { opacity: .3; cursor: default; }
+
+.cal-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.cal-title {
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    text-align: center;
+}
+
+.cal-dow {
+    padding: 6px 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.cal-day {
+    position: relative;
+    aspect-ratio: 1;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    opacity: .55;
+}
+
+.cal-day.today { box-shadow: inset 0 0 0 1px var(--border); }
+
+.cal-day.available {
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-weight: 800;
+    opacity: 1;
+    cursor: pointer;
+    transition: background .15s, color .15s, transform .1s;
+}
+
+.cal-day.available::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 14%;
+    width: 5px;
+    height: 5px;
+    margin-left: -2.5px;
+    border-radius: 50%;
+    background: var(--primary);
+}
+
+.cal-day.available:hover {
+    background: var(--primary);
+    color: var(--on-primary);
+}
+
+.cal-day.available:hover::after { background: var(--on-primary); }
+
+.cal-day.available:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+.cal-day.full { text-decoration: line-through; }
+
+.cal-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.cal-legend .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+}
+
+.day-hero {
+    margin-bottom: 16px;
+    padding: 22px;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--primary), #f0646b);
+    color: #fff;
+    text-align: center;
+    box-shadow: 0 12px 30px rgba(215, 35, 44, .25);
+}
+
+.day-week,
+.day-month {
+    font-size: 17px;
+    font-weight: 700;
+    text-transform: capitalize;
+    opacity: .92;
+}
+
+.day-num {
+    font-size: 72px;
+    font-weight: 800;
+    line-height: 1;
+    margin: 4px 0;
+}
 
 /* ---------- Admin ---------- */
 

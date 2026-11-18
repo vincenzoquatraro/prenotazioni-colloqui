@@ -21,54 +21,80 @@
         <img class="logo" src="logo.png" alt="Cuore di Mamma" width="120" height="126">
         <div class="badge">COLLOQUI DOCENTI</div>
         <h1>Prenota il tuo colloquio</h1>
-        <p>Scegli il docente, il giorno e uno degli appuntamenti disponibili da 15 minuti.</p>
+        <p>Scegli la maestra, il giorno e uno degli appuntamenti disponibili da 15 minuti.</p>
     </header>
 
     <main>
 
-        <section class="card">
-            <div class="step"><span class="step-num">1</span><label for="docente" style="margin:0;color:inherit;font-size:inherit">Docente</label></div>
-            <select id="docente">
-                <option value="">Caricamento docenti...</option>
-            </select>
-        </section>
-
-        <section class="card">
-            <div class="step"><span class="step-num">2</span>Giorno</div>
-            <div id="date-container" class="chips" role="group" aria-label="Giorni disponibili">
-                <div class="empty">Prima scegli un docente</div>
+        <!-- 1. SCELTA MAESTRA -->
+        <section id="view-docenti" class="view">
+            <h2 class="view-title">Con chi vuoi parlare?</h2>
+            <div id="docenti-grid" class="teacher-grid">
+                <div class="teacher-card skeleton-card"></div>
+                <div class="teacher-card skeleton-card"></div>
+                <div class="teacher-card skeleton-card"></div>
+                <div class="teacher-card skeleton-card"></div>
             </div>
         </section>
 
-        <section class="card">
-            <div class="step"><span class="step-num">3</span>Orario</div>
-            <div id="slot-container" class="slots" role="group" aria-label="Orari disponibili">
-                <div class="empty">Scegli docente e giorno</div>
+        <!-- 2. CALENDARIO -->
+        <section id="view-calendario" class="view hidden">
+            <div class="view-head">
+                <button class="back" type="button" data-back="view-docenti" aria-label="Indietro">‹</button>
+                <div class="who"></div>
             </div>
-        </section>
-
-        <section id="dati-card" class="card hidden">
-            <div class="step"><span class="step-num">4</span>I tuoi dati</div>
-
-            <div id="riepilogo" class="summary"></div>
-
-            <div class="field">
-                <label for="genitore">Nome e cognome del genitore</label>
-                <input id="genitore" type="text" placeholder="Mario Rossi" autocomplete="name">
-            </div>
-
-            <div class="grid-2">
-                <div class="field">
-                    <label for="alunno">Nome e cognome dell'alunno</label>
-                    <input id="alunno" type="text" placeholder="Luca Rossi">
+            <div class="card">
+                <div class="cal-nav">
+                    <button id="cal-prev" class="back" type="button" aria-label="Mese precedente">‹</button>
+                    <div id="cal-titolo" class="cal-title"></div>
+                    <button id="cal-next" class="back" type="button" aria-label="Mese successivo">›</button>
                 </div>
-                <div class="field">
-                    <label for="classe">Classe</label>
-                    <input id="classe" type="text" placeholder="2B">
-                </div>
+                <div id="calendario" class="cal-grid" role="grid"></div>
+                <div class="cal-legend"><span class="dot"></span> giorni con posti liberi</div>
+            </div>
+        </section>
+
+        <!-- 3. ORARI E DATI -->
+        <section id="view-orari" class="view hidden">
+            <div class="view-head">
+                <button class="back" type="button" data-back="view-calendario" aria-label="Indietro">‹</button>
+                <div class="who"></div>
             </div>
 
-            <button id="prenota-btn" class="primary">Conferma prenotazione</button>
+            <div class="day-hero">
+                <div id="giorno-settimana" class="day-week"></div>
+                <div id="giorno-numero" class="day-num"></div>
+                <div id="giorno-mese" class="day-month"></div>
+            </div>
+
+            <div class="card">
+                <div class="step"><span class="step-num">1</span>Scegli l'orario</div>
+                <div id="slot-container" class="slots" role="group" aria-label="Orari disponibili"></div>
+            </div>
+
+            <div id="dati-card" class="card hidden">
+                <div class="step"><span class="step-num">2</span>I tuoi dati</div>
+
+                <div id="riepilogo" class="summary"></div>
+
+                <div class="field">
+                    <label for="genitore">Nome e cognome del genitore</label>
+                    <input id="genitore" type="text" placeholder="Mario Rossi" autocomplete="name">
+                </div>
+
+                <div class="grid-2">
+                    <div class="field">
+                        <label for="alunno">Nome e cognome dell'alunno</label>
+                        <input id="alunno" type="text" placeholder="Luca Rossi">
+                    </div>
+                    <div class="field">
+                        <label for="classe">Classe</label>
+                        <input id="classe" type="text" placeholder="2B">
+                    </div>
+                </div>
+
+                <button id="prenota-btn" class="primary">Conferma prenotazione</button>
+            </div>
         </section>
 
         <div id="message" role="status" aria-live="polite"></div>

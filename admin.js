@@ -254,7 +254,7 @@ $("form-docente").addEventListener("submit", async function(e) {
     const btn = this.querySelector("button");
     btn.disabled = true;
     try {
-        await api("aggiungi_docente", { nome: $("n-nome").value.trim(), email: $("n-email").value.trim() });
+        await api("aggiungi_docente", { nome: $("n-nome").value.trim(), email: $("n-email").value.trim(), foto: $("n-foto").value.trim() });
         toast("Docente aggiunto", "success");
         this.reset();
         await ricarica();

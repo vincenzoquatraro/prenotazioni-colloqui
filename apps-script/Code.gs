@@ -2,7 +2,7 @@
 // PRENOTAZIONE COLLOQUI — Backend Google Apps Script
 //
 // Fogli richiesti (prima riga = intestazioni, l'ordine delle colonne non conta):
-//   Docenti:       id | nome | email (facoltativa: invito Calendar)
+//   Docenti:       id | nome | email (facoltativa: invito Calendar) | foto (facoltativa: URL immagine)
 //   Disponibilita: id | docente_id | data | ora_inizio | ora_fine
 //   Prenotazioni:  id | docente_id | data | ora_inizio | ora_fine | genitore | alunno | classe | timestamp | event_id (facoltativa)
 //
@@ -26,7 +26,7 @@ function doGet() {
   try {
     return json({
       success: true,
-      docenti: leggi(FOGLIO_DOCENTI).map(d => ({ id: d.id, nome: d.nome })),
+      docenti: leggi(FOGLIO_DOCENTI).map(d => ({ id: d.id, nome: d.nome, foto: d.foto || "" })),
       disponibilita: leggi(FOGLIO_DISPONIBILITA),
       // al pubblico solo gli slot occupati, nessun dato personale
       prenotazioni: leggi(FOGLIO_PRENOTAZIONI).map(p => ({
@@ -158,7 +158,9 @@ function aggiungiDocente(b) {
   if (!nome) return { success: false, message: "Inserisci il nome del docente." };
   const email = String(b.email || "").trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { success: false, message: "Email non valida." };
-  aggiungi(FOGLIO_DOCENTI, { nome, email });
+  const foto = String(b.foto || "").trim();
+  if (foto && !/^https:\/\//.test(foto)) return { success: false, message: "La foto deve essere un link https://" };
+  aggiungi(FOGLIO_DOCENTI, { nome, email, foto });
   return { success: true };
 }
 
