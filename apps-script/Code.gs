@@ -4,7 +4,7 @@
 // Fogli richiesti (prima riga = intestazioni, l'ordine delle colonne non conta):
 //   Docenti:       id | nome | email (facoltativa: invito Calendar) | foto (facoltativa: URL immagine)
 //   Disponibilita: id | docente_id | data | ora_inizio | ora_fine
-//   Prenotazioni:  id | docente_id | data | ora_inizio | ora_fine | genitore | alunno | classe | timestamp | event_id (facoltativa)
+//   Prenotazioni:  id | docente_id | data | ora_inizio | ora_fine | genitore | email | alunno | classe | timestamp | event_id (facoltativa)
 //
 // Proprietà script (Impostazioni progetto > Proprietà script):
 //   ADMIN_CODE   codice di accesso al pannello (obbligatorio)
@@ -99,6 +99,11 @@ function prenota(b) {
     if (!String(b[c] || "").trim()) return { success: false, message: "Dati mancanti: " + c };
   }
 
+  const email = String(b.email || "").trim();
+  if (b.genitore !== BLOCCO && !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(email)) {
+    return { success: false, message: "Email non valida." };
+  }
+
   if (!slotDisponibile(b.docente_id, b.data, b.ora_inizio)) {
     return { success: false, message: "Orario non disponibile." };
   }
@@ -116,6 +121,7 @@ function prenota(b) {
     ora_inizio: b.ora_inizio,
     ora_fine: b.ora_fine,
     genitore: b.genitore === BLOCCO ? BLOCCO : pulisci(b.genitore),
+    email: b.genitore === BLOCCO ? "" : email,
     alunno: pulisci(b.alunno),
     classe: pulisci(b.classe),
     timestamp: new Date()
@@ -214,14 +220,15 @@ function creaEvento(p) {
     const cal = calendario();
     if (!cal) return "";
     const doc = leggi(FOGLIO_DOCENTI).find(d => String(d.id) === String(p.docente_id)) || {};
+    const ospiti = [doc.email, p.email].filter(Boolean).join(",");
     const ev = cal.createEvent(
       `Colloquio ${doc.nome || ""} – ${p.alunno} (${p.classe})`,
       dataOra(p.data, p.ora_inizio),
       dataOra(p.data, p.ora_fine),
       {
-        description: `Genitore: ${p.genitore}\nAlunno: ${p.alunno}\nClasse: ${p.classe}`,
-        guests: doc.email || "",
-        sendInvites: Boolean(doc.email)
+        description: `Genitore: ${p.genitore}${p.email ? ` (${p.email})` : ""}\nAlunno: ${p.alunno}\nClasse: ${p.classe}`,
+        guests: ospiti,
+        sendInvites: Boolean(ospiti)
       }
     );
     return ev.getId();

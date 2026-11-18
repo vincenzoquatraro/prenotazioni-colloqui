@@ -118,7 +118,7 @@ function renderPrenotazioni() {
             <td>${esc(nomeDocente(p.docente_id))}</td>
             ${chiuso
                 ? `<td colspan="3"><span class="tag">Slot chiuso</span></td>`
-                : `<td>${esc(p.genitore)}</td><td>${esc(p.alunno)}</td><td>${esc(p.classe)}</td>`}
+                : `<td>${esc(p.genitore)}${p.email ? `<br><small class="muted">${esc(p.email)}</small>` : ""}</td><td>${esc(p.alunno)}</td><td>${esc(p.classe)}</td>`}
             <td><button class="btn-ghost btn-danger" type="button">${chiuso ? "Riapri" : "Annulla"}</button></td>`;
         tr.querySelector("button").addEventListener("click", () => azione(
             chiuso

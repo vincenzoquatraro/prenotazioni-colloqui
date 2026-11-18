@@ -14,10 +14,7 @@ const DURATA_SLOT = 15;
 const $ = id => document.getElementById(id);
 
 const slotContainer = $("slot-container");
-const datiCard = $("dati-card");
-const genitoreInput = $("genitore");
-const alunnoInput = $("alunno");
-const classeInput = $("classe");
+const form = $("dati-form");
 const prenotaBtn = $("prenota-btn");
 const message = $("message");
 
@@ -31,7 +28,7 @@ let slotSelezionato = null;
 let meseVisto = null;        // Date al primo del mese mostrato
 
 document.addEventListener("DOMContentLoaded", caricaDati);
-prenotaBtn.addEventListener("click", prenota);
+form.addEventListener("submit", prenota);
 
 document.querySelectorAll("[data-back]").forEach(btn =>
     btn.addEventListener("click", () => mostraVista(btn.dataset.back))
@@ -39,6 +36,7 @@ document.querySelectorAll("[data-back]").forEach(btn =>
 
 $("cal-prev").addEventListener("click", () => cambiaMese(-1));
 $("cal-next").addEventListener("click", () => cambiaMese(1));
+$("nuova-btn").addEventListener("click", () => mostraVista("view-docenti"));
 
 // =====================================================
 // CARICAMENTO DATI
@@ -59,8 +57,8 @@ async function caricaDati() {
         renderDocenti();
     } catch (error) {
         console.error("Errore caricamento:", error);
-        $("docenti-grid").innerHTML = "";
-        mostraMessaggio("Non riesco a collegarmi al sistema di prenotazione. Riprova tra poco.", "error");
+        $("docenti-grid").innerHTML =
+            `<div class="empty">Non riesco a collegarmi al sistema di prenotazione. Riprova tra poco.</div>`;
     }
 }
 
@@ -70,15 +68,19 @@ async function caricaDati() {
 
 function mostraVista(id) {
     document.querySelectorAll(".view").forEach(v => v.classList.toggle("hidden", v.id !== id));
-    if (id !== "view-orari") nascondiDati();
+    if (id === "view-docenti") renderDocenti();
     if (id === "view-calendario") renderCalendario();
-    message.innerHTML = "";
-    message.className = "";
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (id === "view-orari") renderSlot();
+    if (id === "view-dati") {
+        form.classList.remove("hidden");
+        $("successo").classList.add("hidden");
+        $("back-dati").classList.remove("hidden");
+    }
+    mostraMessaggio("", "");
 }
 
 // =====================================================
-// 1. MAESTRE
+// 1. MAESTRA
 // =====================================================
 
 function renderDocenti() {
@@ -86,20 +88,22 @@ function renderDocenti() {
     grid.innerHTML = "";
 
     if (docenti.length === 0) {
-        grid.innerHTML = `<div class="empty">Nessun docente disponibile</div>`;
+        grid.innerHTML = `<div class="empty">Nessuna maestra disponibile</div>`;
         return;
     }
 
     docenti.forEach(function(d) {
         const giorni = giorniLiberi(d.id).length;
+        const [titolo, nome] = titoloNome(d.nome);
         const card = document.createElement("button");
         card.type = "button";
         card.className = "teacher-card";
         card.disabled = giorni === 0;
         card.innerHTML = `
             ${avatar(d)}
-            <span class="teacher-name">${escapeHtml(d.nome)}</span>
-            <span class="teacher-meta">${giorni === 0 ? "Nessuna data libera" : giorni === 1 ? "1 giorno disponibile" : `${giorni} giorni disponibili`}</span>`;
+            <span class="person-label">${escapeHtml(titolo)}</span>
+            <span class="teacher-name">${escapeHtml(nome)}</span>
+            <span class="teacher-meta">${giorni === 0 ? "Nessuna data libera" : giorni === 1 ? "1 giorno libero" : `${giorni} giorni liberi`}</span>`;
         card.addEventListener("click", () => scegliDocente(d));
         grid.appendChild(card);
     });
@@ -111,14 +115,18 @@ function scegliDocente(d) {
     const primo = giorniLiberi(d.id)[0];
     meseVisto = primo ? inizioMese(dataLocale(primo)) : inizioMese(new Date());
 
-    document.querySelectorAll(".who").forEach(el => {
-        el.innerHTML = `${avatar(d, "sm")}<span>${escapeHtml(d.nome)}</span>`;
-    });
+    const [titolo, nome] = titoloNome(d.nome);
+    $("hero-docente").innerHTML = `
+        ${avatar(d, "hero-avatar")}
+        <div>
+            <div class="hero-label">${escapeHtml(titolo)}</div>
+            <div class="hero-big">${escapeHtml(nome)}</div>
+        </div>`;
     mostraVista("view-calendario");
 }
 
 // =====================================================
-// 2. CALENDARIO
+// 2. GIORNO
 // =====================================================
 
 function cambiaMese(delta) {
@@ -173,7 +181,7 @@ function renderCalendario() {
 }
 
 // =====================================================
-// 3. ORARI
+// 3. ORARIO
 // =====================================================
 
 function scegliGiorno(iso) {
@@ -182,15 +190,11 @@ function scegliGiorno(iso) {
     $("giorno-settimana").textContent = d.toLocaleDateString("it-IT", { weekday: "long" });
     $("giorno-numero").textContent = d.getDate();
     $("giorno-mese").textContent = d.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
-
     mostraVista("view-orari");
-    renderSlot();
 }
 
 function renderSlot() {
-    nascondiDati();
     slotContainer.innerHTML = "";
-
     const slots = calcolaSlot(docente.id, dataSelezionata);
 
     if (slots.length === 0) {
@@ -202,57 +206,51 @@ function renderSlot() {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "slot";
-        button.textContent = `${slot.ora_inizio} – ${slot.ora_fine}`;
+        button.textContent = slot.ora_inizio;
+        button.setAttribute("aria-label", `${slot.ora_inizio} – ${slot.ora_fine}`);
 
         if (slot.occupato) {
             button.classList.add("booked");
             button.disabled = true;
             button.title = "Già prenotato";
         } else {
-            button.addEventListener("click", () => selezionaSlot(button, slot));
+            button.addEventListener("click", () => scegliSlot(slot));
         }
         slotContainer.appendChild(button);
     });
 }
 
-function selezionaSlot(button, slot) {
-    slotContainer.querySelectorAll(".slot.selected").forEach(el => el.classList.remove("selected"));
-    button.classList.add("selected");
+// =====================================================
+// 4. DATI
+// =====================================================
+
+function scegliSlot(slot) {
     slotSelezionato = slot;
-
-    $("riepilogo").textContent = `${docente.nome} · ${formattaData(slot.data)} · ${slot.ora_inizio} – ${slot.ora_fine}`;
-
-    datiCard.classList.remove("hidden");
-    datiCard.scrollIntoView({ behavior: "smooth", block: "center" });
-    genitoreInput.focus({ preventScroll: true });
+    $("orario-giorno").textContent = formattaData(slot.data);
+    $("orario-ora").textContent = slot.ora_inizio;
+    $("orario-docente").textContent = `fino alle ${slot.ora_fine} · ${docente.nome}`;
+    mostraVista("view-dati");
+    $("genitore").focus({ preventScroll: true });
 }
 
-function nascondiDati() {
-    slotSelezionato = null;
-    datiCard.classList.add("hidden");
-}
+async function prenota(e) {
+    e.preventDefault();
 
-// =====================================================
-// PRENOTA
-// =====================================================
+    const valori = {};
+    for (const id of ["genitore", "email", "alunno", "classe"]) valori[id] = $(id).value.trim();
 
-async function prenota() {
-    if (!slotSelezionato) {
-        mostraMessaggio("Seleziona prima un orario.", "error");
+    if (Object.values(valori).some(v => !v)) {
+        mostraMessaggio("Compila tutti i campi.", "error");
         return;
     }
-
-    const genitore = genitoreInput.value.trim();
-    const alunno = alunnoInput.value.trim();
-    const classe = classeInput.value.trim();
-
-    if (!genitore || !alunno || !classe) {
-        mostraMessaggio("Compila tutti i campi.", "error");
+    if (!$("email").checkValidity()) {
+        mostraMessaggio("Controlla l'indirizzo email.", "error");
         return;
     }
 
     prenotaBtn.disabled = true;
     prenotaBtn.textContent = "Prenotazione in corso...";
+    mostraMessaggio("", "");
 
     const slot = slotSelezionato;
 
@@ -264,35 +262,25 @@ async function prenota() {
                 data: slot.data,
                 ora_inizio: slot.ora_inizio,
                 ora_fine: slot.ora_fine,
-                genitore,
-                alunno,
-                classe
+                ...valori
             })
         });
 
         const result = await response.json();
+        await caricaDati();
 
         if (!result.success) {
-            await caricaDati();
-            renderSlot();
             mostraMessaggio(escapeHtml(result.message || "Prenotazione non riuscita."), "error");
             return;
         }
 
-        genitoreInput.value = "";
-        alunnoInput.value = "";
-        classeInput.value = "";
-
-        await caricaDati();
-        renderSlot();
-
-        mostraMessaggio(`
-            <strong>✓ Prenotazione confermata</strong><br><br>
-            ${escapeHtml(docente.nome)}<br>
-            <span style="text-transform:capitalize">${formattaData(slot.data)}</span>, ${slot.ora_inizio} – ${slot.ora_fine}<br><br>
-            Alunno: ${escapeHtml(alunno)} (${escapeHtml(classe)})
-        `, "success");
-        message.scrollIntoView({ behavior: "smooth", block: "center" });
+        form.reset();
+        form.classList.add("hidden");
+        $("back-dati").classList.add("hidden");
+        $("successo-testo").innerHTML =
+            `Riceverai l'invito sul calendario a <strong>${escapeHtml(valori.email)}</strong>.<br>` +
+            `Alunno: ${escapeHtml(valori.alunno)} (${escapeHtml(valori.classe)})`;
+        $("successo").classList.remove("hidden");
     } catch (error) {
         console.error("Errore prenotazione:", error);
         mostraMessaggio("Si è verificato un errore durante la prenotazione.", "error");
@@ -348,12 +336,17 @@ function calcolaSlot(docenteId, data) {
 // UTILITÀ
 // =====================================================
 
-function avatar(d, size = "") {
-    const cls = `avatar ${size}`;
+// "Maestra Rossi" -> ["Maestra", "Rossi"]; senza titolo -> ["Maestra", nome]
+function titoloNome(nome) {
+    const m = String(nome).trim().match(/^(maestr[ao]|prof\.?(?:ssa)?\.?|insegnante)\s+(.+)$/i);
+    return m ? [m[1], m[2]] : ["Maestra", String(nome)];
+}
+
+function avatar(d, extra = "") {
+    const cls = `avatar ${extra}`;
     if (d.foto) return `<img class="${cls}" src="${escapeHtml(d.foto).replace(/"/g, "&quot;")}" alt="">`;
-    // iniziali senza titoli tipo "Prof.ssa", "Maestra"
-    const parole = String(d.nome).split(/\s+/).filter(p => p && !p.endsWith(".") && !/^maestr[ao]$/i.test(p));
-    const iniziali = (parole.length ? parole : [d.nome]).slice(0, 2).map(p => p[0].toUpperCase()).join("");
+    const parole = titoloNome(d.nome)[1].split(/\s+/).filter(Boolean);
+    const iniziali = parole.slice(0, 2).map(p => p[0].toUpperCase()).join("");
     return `<span class="${cls}" aria-hidden="true">${escapeHtml(iniziali)}</span>`;
 }
 
