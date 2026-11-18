@@ -423,27 +423,25 @@ button:focus-visible,
     overflow: hidden;
 }
 
-/* altezza fissa: le scelte compaiono senza spostare la pagina */
 .hero-inner {
     position: relative;
     max-width: 560px;
-    height: 200px;
     margin: 0 auto;
     padding: 18px 16px;
 }
 
-/* logo con il suo sfondo bianco, sfumato ai bordi nel rosso/nero */
+/* logo trasparente al centro, parte dello sfondo */
 .hero-inner::before {
     content: "";
     position: absolute;
     top: 50%;
-    right: -40px;
-    width: 260px;
-    height: 260px;
-    transform: translateY(-50%);
-    background: #fff url("logo.png") no-repeat center / 58%;
-    -webkit-mask-image: radial-gradient(circle closest-side, #000 62%, transparent 100%);
-    mask-image: radial-gradient(circle closest-side, #000 62%, transparent 100%);
+    left: 50%;
+    width: 220px;
+    height: 220px;
+    transform: translate(-50%, -50%);
+    background: url("logo-trasparente.png") no-repeat center / contain;
+    mix-blend-mode: screen; /* schiarisce: il cuore rosso resta visibile sul fondo rosso */
+    opacity: .6;
     pointer-events: none;
 }
 
@@ -451,6 +449,7 @@ button:focus-visible,
 .hero-sel { position: relative; }
 
 .hero-top {
+    min-height: 40px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -486,10 +485,10 @@ button:focus-visible,
 .hero-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 
 .hero-sel {
+    min-height: 119px; /* stessa altezza anche quando è vuota (schermata 1) */
     display: flex;
     align-items: flex-start;
     gap: 16px;
-    max-width: calc(100% - 150px);
     margin-top: 18px;
     text-align: left;
     animation: fade .3s ease;
@@ -507,10 +506,13 @@ button:focus-visible,
     line-height: 1.1;
 }
 
+/* spazio riservato a due righe: giorno e orario compaiono senza cambiare l'altezza */
 .hero-chips {
     display: flex;
     flex-wrap: wrap;
+    align-content: flex-start;
     gap: 6px;
+    min-height: 62px;
     margin-top: 8px;
 }
 

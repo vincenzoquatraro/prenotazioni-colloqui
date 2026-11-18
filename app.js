@@ -198,7 +198,7 @@ function renderCalendario() {
 function scegliGiorno(iso) {
     dataSelezionata = iso;
     const testo = formattaData(iso);
-    $("chip-giorno").textContent = "📅 " + testo[0].toUpperCase() + testo.slice(1);
+    $("chip-giorno").textContent = testo[0].toUpperCase() + testo.slice(1);
     mostraVista("view-orari");
 }
 
@@ -235,7 +235,7 @@ function renderSlot() {
 
 function scegliSlot(slot) {
     slotSelezionato = slot;
-    $("chip-ora").textContent = `🕒 ${slot.ora_inizio} – ${slot.ora_fine}`;
+    $("chip-ora").textContent = `${slot.ora_inizio} – ${slot.ora_fine}`;
     mostraVista("view-dati");
     $("genitore").focus({ preventScroll: true });
 }
