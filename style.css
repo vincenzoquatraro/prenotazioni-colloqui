@@ -136,7 +136,6 @@ header p {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    border-top: 3px solid var(--pink);
     padding: 22px;
     margin-bottom: 14px;
     box-shadow: var(--shadow);
@@ -412,78 +411,47 @@ button:focus-visible,
 
 .view .card { margin-bottom: 0; }
 
+/* intestazione a tutta larghezza: logo nello sfondo, dal rosso sfuma al nero */
 .hero {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 168px;
-    padding: 20px 56px;
-    border-radius: var(--radius);
-    background:
-        url("logo-watermark.png") no-repeat right -36px center / auto 150%,
-        linear-gradient(135deg, var(--primary), #f0646b);
-    color: #fff;
-    text-align: center;
-    box-shadow: 0 12px 30px rgba(215, 35, 44, .25);
-    overflow: hidden;
-}
-
-.hero-label {
-    font-size: 15px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, .78);
-}
-
-.hero-big {
-    font-size: 30px;
-    font-weight: 800;
-    line-height: 1.1;
-}
-
-.hero-huge {
-    font-size: 64px;
-    margin: 2px 0;
-}
-
-.hero-sub {
-    font-size: 15px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, .9);
-}
-
-/* solo la prima lettera maiuscola: "mercoledì 25 novembre" -> "Mercoledì 25 novembre" */
-.hero-label::first-letter,
-.hero-sub::first-letter { text-transform: uppercase; }
-
-.hero-logo {
-    width: 64px;
-    height: auto;
-    margin-bottom: 10px;
-    padding: 6px;
-    border-radius: 16px;
-    background: #fff;
-}
-
-.hero-person {
-    display: flex;
-    align-items: center;
-    gap: 16px;
+    margin: 0;
     text-align: left;
+    color: #fff;
+    background:
+        url("logo-watermark.png") no-repeat right max(-40px, calc(50% - 360px)) center / auto 190%,
+        linear-gradient(105deg, var(--primary) 0%, #a3151c 40%, #3a080b 75%, #0d0203 100%);
+    box-shadow: 0 10px 30px rgba(60, 5, 10, .25);
+}
+
+.hero-inner {
+    max-width: 560px;
+    min-height: 92px;
+    margin: 0 auto;
+    padding: 18px 16px 22px;
+}
+
+.hero-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hero-title {
+    flex: 1;
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -.01em;
 }
 
 .hero-btn {
-    position: absolute;
-    top: 14px;
-    left: 14px;
     display: grid;
     place-items: center;
     width: 40px;
     height: 40px;
+    flex: none;
     border: 0;
     border-radius: 50%;
-    background: rgba(255, 255, 255, .2);
+    background: rgba(255, 255, 255, .18);
     color: #fff;
     font: inherit;
     font-size: 26px;
@@ -492,11 +460,59 @@ button:focus-visible,
     transition: background .15s;
 }
 
-.hero-btn:hover { background: rgba(255, 255, 255, .32); }
+.hero-btn:hover { background: rgba(255, 255, 255, .3); }
 
 .hero-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 
-.hero-right { left: auto; right: 14px; }
+.hero-sel {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 18px;
+    text-align: left;
+    animation: fade .3s ease;
+}
+
+.hero-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, .65);
+}
+
+.hero-name {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.hero-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.hero-chip {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .16);
+    font-size: 14px;
+    font-weight: 700;
+    animation: fade .3s ease;
+}
+
+.view-title {
+    margin: 6px 0 0;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.hint {
+    margin: -2px 0 14px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--muted);
+}
 
 .card-title {
     margin-bottom: 14px;
@@ -518,7 +534,6 @@ button:focus-visible,
     min-height: 168px;
     padding: 16px 10px;
     border: 1px solid var(--border);
-    border-top: 3px solid var(--pink);
     border-radius: var(--radius);
     background: var(--surface);
     color: var(--text);

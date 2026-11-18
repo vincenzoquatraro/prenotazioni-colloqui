@@ -30,8 +30,11 @@ let meseVisto = null;        // Date al primo del mese mostrato
 document.addEventListener("DOMContentLoaded", caricaDati);
 form.addEventListener("submit", prenota);
 
-document.querySelectorAll("[data-back]").forEach(btn =>
-    btn.addEventListener("click", () => mostraVista(btn.dataset.back))
+const ORDINE_VISTE = ["view-docenti", "view-calendario", "view-orari", "view-dati"];
+let vista = ORDINE_VISTE[0];
+
+$("hero-back").addEventListener("click", () =>
+    mostraVista(ORDINE_VISTE[ORDINE_VISTE.indexOf(vista) - 1])
 );
 
 $("cal-prev").addEventListener("click", () => cambiaMese(-1));
@@ -67,6 +70,7 @@ async function caricaDati() {
 // =====================================================
 
 function mostraVista(id) {
+    vista = id;
     document.querySelectorAll(".view").forEach(v => v.classList.toggle("hidden", v.id !== id));
     if (id === "view-docenti") renderDocenti();
     if (id === "view-calendario") renderCalendario();
@@ -74,9 +78,19 @@ function mostraVista(id) {
     if (id === "view-dati") {
         form.classList.remove("hidden");
         $("successo").classList.add("hidden");
-        $("back-dati").classList.remove("hidden");
+        $("titolo-dati").classList.remove("hidden");
     }
     mostraMessaggio("", "");
+    renderHero();
+}
+
+// L'intestazione accumula le scelte: maestra, poi giorno, poi orario
+function renderHero(concluso = false) {
+    const passo = ORDINE_VISTE.indexOf(vista);
+    $("hero-back").classList.toggle("hidden", passo === 0 || concluso);
+    $("hero-sel").classList.toggle("hidden", passo === 0);
+    $("chip-giorno").classList.toggle("hidden", passo < 2);
+    $("chip-ora").classList.toggle("hidden", passo < 3);
 }
 
 // =====================================================
@@ -116,12 +130,9 @@ function scegliDocente(d) {
     meseVisto = primo ? inizioMese(dataLocale(primo)) : inizioMese(new Date());
 
     const [titolo, nome] = titoloNome(d.nome);
-    $("hero-docente").innerHTML = `
-        ${avatar(d, "hero-avatar")}
-        <div>
-            <div class="hero-label">${escapeHtml(titolo)}</div>
-            <div class="hero-big">${escapeHtml(nome)}</div>
-        </div>`;
+    $("hero-avatar").innerHTML = avatar(d, "hero-avatar");
+    $("hero-titolo").textContent = titolo;
+    $("hero-nome").textContent = nome;
     mostraVista("view-calendario");
 }
 
@@ -186,10 +197,8 @@ function renderCalendario() {
 
 function scegliGiorno(iso) {
     dataSelezionata = iso;
-    const d = dataLocale(iso);
-    $("giorno-settimana").textContent = d.toLocaleDateString("it-IT", { weekday: "long" });
-    $("giorno-numero").textContent = d.getDate();
-    $("giorno-mese").textContent = d.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+    const testo = formattaData(iso);
+    $("chip-giorno").textContent = "📅 " + testo[0].toUpperCase() + testo.slice(1);
     mostraVista("view-orari");
 }
 
@@ -226,9 +235,7 @@ function renderSlot() {
 
 function scegliSlot(slot) {
     slotSelezionato = slot;
-    $("orario-giorno").textContent = formattaData(slot.data);
-    $("orario-ora").textContent = slot.ora_inizio;
-    $("orario-docente").textContent = `fino alle ${slot.ora_fine} · ${docente.nome}`;
+    $("chip-ora").textContent = `🕒 ${slot.ora_inizio} – ${slot.ora_fine}`;
     mostraVista("view-dati");
     $("genitore").focus({ preventScroll: true });
 }
@@ -276,7 +283,8 @@ async function prenota(e) {
 
         form.reset();
         form.classList.add("hidden");
-        $("back-dati").classList.add("hidden");
+        $("titolo-dati").classList.add("hidden");
+        renderHero(true);
         $("successo-testo").innerHTML =
             `Riceverai l'invito sul calendario a <strong>${escapeHtml(valori.email)}</strong>.<br>` +
             `Alunno: ${escapeHtml(valori.alunno)} (${escapeHtml(valori.classe)})`;
